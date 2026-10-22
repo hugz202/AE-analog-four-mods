@@ -32,7 +32,8 @@
         .equ    TRIG_BITS,    3
         .equ    STEP_TICKS,   2700000              | LEN 14 ("1/16") = one step
         .equ    OVERLAP,      675000               | a quarter step
-        .equ    LEN_TICKS,    0x401f1c34           | ticks(LEN) = LEN_TICKS[LEN + 1]
+        .equ    LEN_TICKS,    0x40218384           | ticks(LEN) = LEN_TICKS[LEN + 1]
+                                                   | (MK1: 0x401f1c34)
         .equ    LEN_MAX,      126                  | 127 is INF
         .equ    PAT_LEN_MODE, 93900                | pattern byte: per-track lengths?
         .equ    PAT_LEN,      93894                | pattern length (word)

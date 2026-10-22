@@ -1,7 +1,7 @@
 # Building a firmware
 
-The output is a normal OS update file, `build/A4_OS1.56_<name>.syx`, that you send to
-the Analog Four / Analog Keys MK1 like any OS update (see docs/FLASHING.md).
+The output is a normal OS update file, `build/A4MK2_OS1.56_<name>.syx`, that you send to
+the Analog Four MKII like any OS update (see docs/FLASHING.md).
 
 ## 1. One-time setup
 
@@ -31,8 +31,8 @@ PowerShell as `wsl -d Ubuntu-24.04 --cd <this folder as a /mnt/... path> -- make
 
 **Then, in this folder:**
 
-1. Download the official Analog Four / Analog Keys MK1 **OS 1.56** from Elektron
-   and copy the `.syx` into `stock/` as `stock/Analog-Four_Analog-Keys_OS1.56.syx`.
+1. Download the official Analog Four MKII **OS 1.56** from Elektron and copy the
+   `.syx` into `stock/` as `stock/Analog-Four_MKII_OS1.56.syx`.
    The build checks it against `stock/SHA256SUMS` and stops if it is a different
    file.
 2. Fetch and build the container tool (once):
@@ -47,18 +47,19 @@ PowerShell as `wsl -d Ubuntu-24.04 --cd <this folder as a /mnt/... path> -- make
    make control
    ```
 
-   This builds `build/A4_OS1.56_control.syx` from the stock code with no mod at all,
-   and checks it reproduces the stock file byte for byte.
+   This builds `build/A4MK2_OS1.56_control.syx` from the stock code with no mod at
+   all, and checks that its MAIN OS reads back as stock and that every other section
+   (bootstrap, FPGA, panel MCU) is the stock one.
 
 ## 2. Build
 
 | command | builds | file |
 |---|---|---|
-| `make full` | all the mods in this release | `build/A4_OS1.56_full.syx` |
-| `make hard` | the same, with the drive in HARD only (no CHR knob, lighter on the CPU) | `build/A4_OS1.56_hard.syx` |
-| `make scale` | the scale lock only | `build/A4_OS1.56_scale.syx` |
-| `make slide` | the 303 slide only, on for every synth track | `build/A4_OS1.56_slide.syx` |
-| `make custom MODS="..." TAG=name` | your own selection | `build/A4_OS1.56_name.syx` |
+| `make full` | all the mods in this release | `build/A4MK2_OS1.56_full.syx` |
+| `make hard` | the same, with the drive in HARD only (no CHR knob, lighter on the CPU) | `build/A4MK2_OS1.56_hard.syx` |
+| `make scale` | the scale lock only | `build/A4MK2_OS1.56_scale.syx` |
+| `make slide` | the 303 slide only, on for every synth track | `build/A4MK2_OS1.56_slide.syx` |
+| `make custom MODS="..." TAG=name` | your own selection | `build/A4MK2_OS1.56_name.syx` |
 
 Each one ends by verifying the file it built and prints `PASS`. If it prints `FAIL`
 or stops with an error, don't flash that file.
@@ -112,7 +113,7 @@ make custom MODS="0001-scale-lock 0002-slide-303" PARAMS="0002-slide-303:always_
 ```
 
 `make` alone (or `make verify`) builds the mods marked `enabled = true` in their
-`mod.toml` (out of the box: the scale lock), as `build/A4_OS1.56_0001.syx`.
+`mod.toml` (out of the box: the scale lock), as `build/A4MK2_OS1.56_0001.syx`.
 
 ## 3. Other targets
 

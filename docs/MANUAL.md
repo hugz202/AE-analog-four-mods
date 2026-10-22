@@ -1,4 +1,8 @@
-# Manual - Analog Four / Analog Keys MK1 mods (OS 1.56)
+# Manual - Analog Four MKII mods (OS 1.56)
+
+(Written for the MK1; the MKII builds are meant to behave the same, see
+docs/PORT-MK2.md for what has been checked. MKII page titles carry the
+page count: AMP shows "AMP (P 1/2)" and the DIST page "DIST (P 2/2)".)
 
 What each mod does on the instrument. Which mods are in your firmware depends on how
 it was built (BUILD.md); `make full` and `make hard` have all of them.
@@ -67,12 +71,15 @@ press it again to go back to AMP.
 | knob | setting | values |
 |---|---|---|
 | 1 | DIG | switch: off = analog path, on = digital path |
-| 2 | CHR | 3 positions: HARD (left), RAT (middle), OD (right) |
+| 2 | CHR | 3 positions: HARD (left), RAT (middle), OD (right); while turned the label reads HRD / RAT / OD |
 | 3 | DRV | drive into the clipper, 0 = clean |
 | 4 | BIT | bit reduction, 0 = off |
 | 5 | SRR | sample-rate reduction, 0 = off |
 | 6 | LEV | level of the digital path, ~100 = level with the analog path |
 | 7 | SLD | switch: off = stock slide, on = 303 slide (needs 0002) |
+
+While you turn a knob its label shows the value (DRV BIT SRR LEV as numbers, CHR as
+HRD / RAT / OD), as on the stock pages.
 
 In the **HARD-only build** (`make hard`) there is no CHR knob: the page closes up to
 DIG DRV BIT SRR LEV / SLD, and the drive is always HARD (it sounds exactly like HARD
@@ -191,9 +198,10 @@ cycle, so there is no flanging swirl at the start of the note.
   use the folder on sine and triangle.
 - CPU, per track playing it: WAV about 1-2 % of the audio budget, a 3-note chord
   2-3 %, a 4-note chord or supersaw 3-6 % (sine and a high FLD cost the most). A
-  track whose noise LEV is 0 costs almost nothing: the oscillator is skipped while
-  silent. Several chord tracks together with the digital path run fine, but four
-  heavy chord tracks on top of a busy kit can reach the limit.
+  track costs almost nothing while no note sounds on it (its VCA is closed) or its
+  noise LEV is 0. On the MKII the budget is tighter than these figures suggest: two
+  chord tracks sounding at once are the comfortable maximum; with a third the UI
+  starts to slow down [hw 2026-10-22].
 
 ## First-flash checklist
 

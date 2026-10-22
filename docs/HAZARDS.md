@@ -1,73 +1,67 @@
-# Hazards - Analog Four / Analog Keys MK1
+# Hazards - Analog Four MKII
 
-Read before flashing, and before writing a mod. (The same platform - ColdFire, MAIN
-OS with an embedded bootstrap - is used by the Analog Rytm MK1; the same rules hold
-there.)
+Read before flashing, and before writing a mod. (The MK1 branches have their own
+version of this file; the MKII differs in the bootstrap, the code pools and the
+cache.)
 
-## The bootstrap lives INSIDE MAIN OS - never write into it
+## The bootstrap is its own section - never touch it
 
-The `.syx` has one section, MAIN OS, and the bootstrap (the STARTUP menu and the
-DIN-MIDI OS UPGRADE that survive a bad OS) is carried inside it:
+The MKII `.syx` (ELE3) has five sections: 5 (metadata), 2 (the bootstrap: the
+STARTUP menu and the DIN-MIDI OS UPGRADE that survive a bad OS), 1 (the FPGA image),
+3 (MAIN OS) and 8 (the panel MCU image). The mods change MAIN OS only.
+`tools/build.py` refuses a build whose other sections differ from the stock file's,
+and `tools/verify.py` reads them back out of the finished `.syx` and compares them
+again. Keep both checks. Unlike the MK1, MAIN OS carries no copy of the bootstrap,
+so no pool needs to stay clear of one.
 
-- `0x40226958` holds the embedded bootstrap's version words, `0x40226960..0x40233a30`
-  its image (53,456 B).
-- At every boot the startup code (`0x40000e6a`) compares that version with the one in
-  flash at `0xfff8`. If the embedded one is newer, `0x401006dc` erases the bootstrap
-  sectors and writes the embedded image into them.
+## MAIN OS unpacks over itself
 
-So a mod byte anywhere in that range could one day be written into the recovery path.
-Hence:
-
-- No pool may overlap `0x40226958..0x40233a30`. The nearest, `cave2`, starts 16 bytes
-  past its end.
-- `tools/build.py` refuses to write a build whose embedded image differs from stock,
-  and `tools/verify.py` checks it again on the `.syx` it reads back
-  ("embedded bootstrap image unchanged"). Keep both checks.
-- Do not power off during the first boot after flashing. If your unit was on an OS
-  older than 1.55, that boot may be a genuine bootstrap upgrade (with our builds it is
-  the manufacturer's own, unmodified image that gets written).
+The MKII bootstrap copies the packed MAIN OS to 0x40200000 and unpacks it to
+0x40000400, over its own input. That only works while the unpacked output stays
+behind the input still to be read. `tools/verify.py` simulates it and prints the
+margin ("depacks in place with N B to spare": stock 540,191 B, our builds about
+487,000 B); a build with no margin left must not be flashed. It also checks the file
+ends below the 0x300000 flash limit.
 
 ## Where the mod code lives
 
-`registry/allocations.toml` explains both code pools. `cave` is the padding between
-the C++ constructor table and `__bss_start`; `cave2` is the padding right after the
-embedded bootstrap image. The case for both is static - nothing points into them,
-nothing reads them as a table, they are below the `.bss` clear and the SRAM copies -
-and both have since run the mods on hardware. On OS 1.56 the embedded bootstrap grew 1,424 B and fills what was
-`cave2` on 1.55, so on this branch `cave2`, `cave4`, `cave5` and `cave6` are DEAD
-CODE: four runs of routines the firmware contains but never calls (stock = "code" in
-the registry; the build checks a hash of their stock bytes before writing there).
-The case for them is static - no call, branch, pointer, vtable entry or switch-table
-case reaches them - plus emulator coverage: they never ran in seven long sessions
-that reached 540 KB of code. The first hardware run (2026-10-17, `make hard`) went
-through the whole checklist cleanly. A third, `cave3`, is a 1 KB gap
-between the chorus's lookup tables that no index can reach (0010 lives there, and
-its detour on the chorus clamps the one index that could). There is almost no room
-left: a new mod has to find space (`make cavescan` lists candidates, most of which
-turn out to be the ends of tables still in use) or share it.
+`registry/allocations.toml` explains every pool. `cave` is the padding between the
+C++ constructor table and `__bss_start` (0x40253000), `cave3` a 1 KB gap between
+the chorus's lookup tables that no index can reach (0010 lives there, and its detour
+on the chorus clamps the one index that could). `cave2` and `cave4`..`cave7` are DEAD
+CODE: runs of routines the firmware contains but never calls (stock = "code" in the
+registry; the build checks a hash of their stock bytes before writing there). The
+case for them is static - no call, branch, pointer, vtable entry or switch-table case
+reaches them. On the MK1 their twins were also shown never to run in long emulator
+sessions and have since run the mods on hardware. On the MKII the same coverage check
+(108 G instructions, 0 hits in every pool) promoted them to "probably-verified", and
+the full build has since run from them through the MKII hardware test (2026-10-22). A new pool starts as "candidate", and `tools/layout.py`
+refuses to let a feature mod use it until such a check is recorded in its note.
+There is no room left in `cave`.
 
-## DDR above 0x44000000 is not cached
+## Free DDR: 0x47be0000..0x47bfffff
 
-The boot code caches only 0x40000000..0x43ffffff (ACR0 `0x4003e020`; the default
-mode is cache-inhibited). The effect delay lines, and the mods' own state in the
-free DDR beside them (0x4680xxxx), are therefore uncached: every access is a full
-bus round trip. Code in the audio interrupt must not touch that memory per sample.
-Copy the state to the stack (cached) once per block, work there, and write it back.
-An early version of 0010 kept its working state there and made about 1,000 such
-accesses per block on each chord voice: the UI slowed down and the unit could crash.
+0007 and 0010 keep their buffers and state in DDR at 0x47be0000..0x47be10c0. Nothing
+in the MKII image refers to that range, and elekloader's DDR canary found it
+untouched on an MKII. The MK1's choice, 0x4680xxxx beside the effect RAM, is not
+known to be free on the MKII (its effect RAM moved). On the MKII the boot code caches
+0x40000000..0x47ffffff (ACR0 `0x4007e020`), so this DDR is cached; the stubs still
+copy state to the stack once per block and work there, as on the MK1, where the same
+memory was uncached and per-sample access made the unit crash.
 
 ## Assembler target: ColdFire V4e, EMAC, NO FPU
 
-`-mcpu=5475 -mno-float` (from re/symbols.toml [meta]). With -mno-float an FPU
-instruction in a stub is an assembly error instead of a crash on the unit.
+`-mcpu=54455` (MCF5441x, which has no FPU at all; from re/symbols.toml [meta]), so
+an FPU instruction in a stub is an assembly error instead of a crash on the unit.
 
 ## Verify before flashing, every time
 
 `make verify` asserts:
 
-- stock `.syx` rebuilds byte-identically (null repack)
+- the stock `.syx` re-packs byte-identically (null repack)
 - MAIN OS is unchanged in size and round-trips out of our `.syx`
-- the embedded bootstrap image is stock, and the `.syx` carries MAIN OS only
+- every other section (bootstrap, FPGA, panel MCU, metadata) is stock
+- MAIN OS still unpacks in place with a margin, and the file fits in flash
 - every byte that differs from stock lies inside a registry claim
 - every detour jumps to its resolved entry, inside its own cave, and rejoins stock
   past exactly what it displaced

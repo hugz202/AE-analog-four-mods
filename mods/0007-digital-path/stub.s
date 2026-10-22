@@ -24,16 +24,25 @@
         .equ    F_SLD,      5
         .equ    FRAMES,     32
         .equ    FRAME_SIZE, 32                    | 8 codec slots of 32 bits
-        .equ    FX_STATE4,  0x415c0008            | what fx_block_tail stores
-        .equ    CAP,        0x46804000            | captured tracks, 4 x 32 longs,
-        .equ    HOLD,       0x4680c200            | and their DSP state: free DDR
-                                                  | (unreferenced by stock). Not
-                                                  | cached (ACR0 covers only
-                                                  | 0x40000000..0x43ffffff), so
-                                                  | each access costs a bus round
-                                                  | trip: the per-sample loop works
-                                                  | on a copy on the stack.
-        .equ    PROJECT_FXSETUP, 244 + 0x1030
+        .equ    FX_STATE4,  0x41864a74            | what fx_block_tail stores
+                                                  | (MK1: 0x415c0008)
+        .equ    CAP,        0x47be0000            | captured tracks, 4 x 32 longs,
+        .equ    HOLD,       0x47be0200            | and their DSP state: free DDR
+                                                  | at the MKII's
+                                                  | 0x47be0000..0x47bfffff, which
+                                                  | stock never refers to (the
+                                                  | MK1's 0x4680c000 gap is not
+                                                  | known free on the MKII: its
+                                                  | FX RAM moved). Cached on the
+                                                  | MKII (ACR0 0x4007e020 covers
+                                                  | 0x40000000..0x47ffffff); the
+                                                  | per-sample loop still works on
+                                                  | a copy on the stack.
+        .equ    VOICE0_SLOT, 8                    | track 0's slot in a frame: the
+                                                  | MKII send mix reads slots 2..7
+                                                  | (four voices, then the input;
+                                                  | MK1: 0..3 and 6..7)
+        .equ    PROJECT_FXSETUP, 364 + 0x1030      | MKII: the active kit at project + 364 (MK1 244)
 
         .text
 
@@ -42,7 +51,7 @@
         | ==================================================================
 
         | ------------------------------------------------------------------
-        | track_levels, at `movel %a2@,%d0; macl %d0,%d5,%acc0`: the volume
+        | track_levels, at `movel %a3@,%d0; macl %d0,%d7,%acc0`: the volume
         | loaded for the analog dry VCA words only (the send gain is already
         | written). d2 = track, d1 dead. A track on the digital path gets a dry
         | volume of 0 - what stock computes for VOL 0 - and keeps its capture.
@@ -61,8 +70,8 @@ dry_gate:
         beq.s   1f
         moveq   #0,%d0
         bra.s   2f
-1:      move.l  (%a2),%d0                         | displaced
-2:      mac.l   %d0,%d5,%acc0                     | displaced
+1:      move.l  (%a3),%d0                         | displaced
+2:      mac.l   %d0,%d7,%acc0                     | displaced
         jmp     dry_volume_resume
 
         | ------------------------------------------------------------------
@@ -151,7 +160,8 @@ fxin_gate:
         beq.w   99f
         move.l  %d0,%a2
         lea     TRK_BASE(%a2),%a2                 | track 0's settings
-        move.l  144(%sp),%a3                      | track 0's slot in the frames
+        move.l  144(%sp),%a3                      | the frames
+        addq.l  #VOICE0_SLOT,%a3                  | track 0's slot in them
         move.l  #CAP,%a1
         move.l  #HOLD,%a5                         | &hold[0]
         moveq   #4,%d7                            | tracks left
@@ -478,6 +488,75 @@ key_find:
         | if the knob is not ours on this view's page. Per-track and sound
         | entries use the view's track and refuse the FX track.
 
+        | (In cave6 with the FX block output: .ui4 is full.)
+        | step_of(d1 = the encoder's delta, 8.8; a1 = the entry; d4 = its max)
+        | -> d1 = the steps to take. Dials take the delta's whole steps (at
+        | least one); switches one per turn. Settings of 3..16 positions (CHR,
+        | the oscillator's mode, the chord) step once per TURN turns, each
+        | counted as one plain step whatever its speed. That is the encoder
+        | profile stock gives stepped parameters (MKII 0x417356f4, the Rytm's
+        | BD HARD WAV 0x417e37ac: 6 counts a step, no acceleration [emu]),
+        | where our host knobs have the dials' (0x4173572c: 3 counts, with
+        | acceleration): one plain step was touchy, a quick one (0x200)
+        | skipped WAV / RAT. The turning so far is kept per
+        | knob in free DDR (ACC: the entry's key, then the turns) and starts over
+        | on another knob or a change of direction. Other registers kept.
+        .equ    ACC,  0x47be1100                  | above 0010's state
+        .equ    TURN, 3                           | three plain steps a position:
+                                                  | on the unit, AMP SHP took about
+                                                  | 1.5x the turning of TURN 2
+        .align  2
+step_of:
+        lea     -8(%sp),%sp
+        movem.l %d2/%a0,(%sp)                     | a0 = the setting's base
+        cmpi.l  #15,%d4
+        bhi.s   7f                                | a dial
+        cmpi.l  #1,%d4
+        beq.s   8f                                | a switch
+        moveq   #1,%d2                            | each turn counts as one plain
+        tst.l   %d1                               | step: no acceleration
+        bpl.s   0f
+        moveq   #-1,%d2
+0:      move.l  %d2,%d1
+        lea     ACC,%a0
+        mvz.w   (%a1),%d2                         | this knob's key
+        cmp.l   (%a0),%d2
+        beq.s   1f
+        move.l  %d2,(%a0)                         | another knob: start over
+        clr.l   4(%a0)
+1:      move.l  4(%a0),%d2
+        eor.l   %d1,%d2
+        bpl.s   2f
+        clr.l   4(%a0)                            | the other way: start over
+2:      add.l   4(%a0),%d1
+        move.l  %d1,4(%a0)
+        moveq   #TURN,%d2
+        cmp.l   %d2,%d1
+        bge.s   3f
+        neg.l   %d2
+        cmp.l   %d2,%d1
+        bgt.s   9f
+        moveq   #-1,%d1
+        bra.s   4f
+3:      moveq   #1,%d1
+4:      clr.l   4(%a0)
+        bra.s   6f
+9:      moveq   #0,%d1
+        bra.s   6f
+7:      move.l  %d1,%d2
+        asr.l   #8,%d1
+        bne.s   6f
+        move.l  %d2,%d1                           | under a step: its sign
+8:      tst.l   %d1
+        bmi.s   5f
+        moveq   #1,%d1
+        bra.s   6f
+5:      moveq   #-1,%d1
+6:      movem.l (%sp),%d2/%a0
+        lea     8(%sp),%sp
+        rts
+
+
         .section .ui3,"ax"
         .align  2
 slot_of:
@@ -545,9 +624,10 @@ pgv_gate:
         cmp.l   %d1,%d0
         ble.s   1f
         move.l  %d1,%d0                           | clamp (older, wider values)
-1:      subq.l  #2,%d1                            | 3 positions: drawn as 0/63/127
-        bne.s   2f                                | on the dial; switches (max 1)
-        mulu.w  #127,%d0                          | as 0/1 (their max is 0x100)
+1:      subq.l  #2,%d1                            | 3 positions: drawn as 0/64/127
+        bne.s   2f                                | (MKII: CHR's pan marker at left,
+        mulu.w  #127,%d0                          | centre, right); switches (max 1)
+        addq.l  #1,%d0                            | as 0/1 (their max is 0x100)
         lsr.l   #1,%d0
 2:      lsl.l   #8,%d0
         move.l  (%sp)+,%d2
@@ -561,7 +641,8 @@ pgv_gate:
         | The encoder handler's call of param_apply_delta, with (view, id,
         | delta, FUNC, &flag) pushed and a0 = the view's vtable. While FUNC is
         | held our knobs change our setting by the delta's whole steps (at least
-        | one), the kit is marked edited, and the handler exits without stock's
+        | one; settings of up to 16 positions by exactly one), the kit is marked
+        | edited, and the handler exits without stock's
         | value popup (which would show the stock parameter).
         | ------------------------------------------------------------------
         .align  2
@@ -585,13 +666,8 @@ enc_gate:
         ble.s   4f
         move.l  %d4,%d0
 4:      move.l  24(%sp),%d1
-        asr.l   #8,%d1
-        bne.s   1f
-        moveq   #1,%d1
-        tst.l   24(%sp)
-        bpl.s   1f
-        moveq   #-1,%d1
-1:      add.l   %d1,%d0
+        jbsr   step_of                            | -> whole steps (.dsp2)
+        add.l   %d1,%d0
         bpl.s   2f
         moveq   #0,%d0
 2:      cmp.l   %d4,%d0                           | up to the entry's max
@@ -619,6 +695,12 @@ enc_gate:
         | constructed a string object there, and the page printed its pointer
         | bytes - the garbled labels seen on hardware, 2026-10-10.)
 
+        .if     P_CHR
+chr_names: .asciz "HRD", "HRD", "RAT", "OD\0"        | CHR's values by value >> 13
+                                                  | (0, 2, 3), 4 bytes each
+        .align  2
+        .endif
+
         .section .ui4,"ax"
         | ------------------------------------------------------------------
         .align  2
@@ -626,7 +708,19 @@ lbl_gate:
         move.l  8(%sp),%d0
         jbsr   name_of
         beq.s   9f
-        move.l  %d0,%a0
+        cmpi.l  #s_dig,%d0                        | the DIST page's knobs: stock
+        bcs.s   2f                                | formats the value it is given,
+        cmpi.l  #s_sld,%d0                        | which is ours (page_get_value),
+        bhi.s   2f                                | as the host knob's: numbers, on
+        .if     P_CHR                             | and off
+        cmpi.l  #s_chr,%d0                        | CHR: HRD / RAT / OD
+        bne.s   9f
+        move.l  8(%sp),%d1
+        bsr.s   chr_name
+        .else
+        bra.s   9f
+        .endif
+2:      move.l  %d0,%a0
         move.l  16(%sp),%a1                       | out
 1:      move.b  (%a0)+,%d0
         move.b  %d0,(%a1)+
@@ -636,6 +730,27 @@ lbl_gate:
         move.l  %d2,-(%sp)                        | displaced
         move.l  20(%sp),%d2                       | displaced
         jmp     param_label_body
+
+        .if     P_CHR
+        | chr_name(d1 = id) -> d0 = CHR's value as HRD / RAT / OD: what
+        | page_get_value hands the knob draw (0, 0x4000, 0x7f00) >> 13 picks the
+        | name. The label formatter's text is what the knob draw shows while
+        | the knob is turned (stock knobs show their value there), its short
+        | name otherwise.
+chr_name:
+        pea     -1                                | lock
+        move.l  %d1,-(%sp)
+        move.l  shared_draw_view,-(%sp)
+        jsr     pgv_gate
+        lea     12(%sp),%sp
+        moveq   #13,%d1
+        lsr.l   %d1,%d0
+        lsl.l   #2,%d0
+        lea     chr_names,%a0
+        add.l   %d0,%a0
+        move.l  %a0,%d0
+        rts
+        .endif
 
         | ------------------------------------------------------------------
         | The parameter sets' short-name getter (vtable +0x74, shared):
@@ -702,7 +817,10 @@ layer_table:
         .byte   TRK_BASE+F_DIG, 0, TRK_SIZE, 1
         .long   s_dig
         .if     P_CHR
-        .short  P17+92                              | AMP REL dial -> CHR, 3 steps
+        .short  P17+97                              | AMP PAN -> CHR, 3 steps (MKII: the
+                                                    | pan marker shows HARD / RAT / OD as
+                                                    | left / centre / right; REL draws
+                                                    | nothing outside the AMP envelope)
         .byte   CHR_OFF, 0, 1, 2
         .long   s_chr
         .endif
@@ -741,7 +859,9 @@ s_sld:  .asciz  "SLD"
 s_wav:  .asciz  "WAV"
 
         | ==================================================================
-        | In `cave` (cave2 is full): the knob labels
+        | In `cave` (cave2 is full): the settings' storage helpers. On the
+        | MKII `cave` is 224 B smaller than the MK1's, so name_of and its
+        | names moved out to cave7 (section .ui5, below).
         | ==================================================================
         .section .ui2,"ax"
 
@@ -832,6 +952,11 @@ snd_word:
         rts
 8:      moveq   #0,%d0
         rts
+
+        | ==================================================================
+        | In cave7 (MKII only): the knob labels
+        | ==================================================================
+        .section .ui5,"ax"
 
         | name_of(d0 = id) -> d0 = our label for that knob of the view drawn
         | last (0008's shared_draw_view), Z clear; or Z set. Settings get

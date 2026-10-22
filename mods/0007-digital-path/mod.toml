@@ -8,7 +8,7 @@ title   = "Digital path: per-track snatch + distortion (HARD / RAT / OD), edited
 enabled = false
 
 # re-only | built | hardware-verified | retracted
-status  = "built"
+status  = "hardware-verified"   # MKII 1.56, docs/HWTEST-MK2.md (2026-10-22)
 
 # 0004 hooks the same dry-volume load; it is a measuring probe, never in this build.
 excludes = ["0004-dsp-probe"]

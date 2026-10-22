@@ -7,7 +7,7 @@ title   = "Digital wave / chord oscillator: the noise generator plays a sine/tri
 enabled = false
 
 # re-only | built | hardware-verified | retracted
-status  = "built"
+status  = "hardware-verified"   # MKII 1.56, docs/HWTEST-MK2.md (2026-10-22)
 
 summary = """
 The NOISE page's 4th knob (OFF / WAV / CHD) turns the track's noise generator into a

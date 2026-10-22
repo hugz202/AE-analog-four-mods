@@ -1,148 +1,199 @@
-# PORTED from the OS 1.55 registry (2026-10-17, docs/PORT-1.56.md). Addresses and
-# expect bytes are 1.56; comments may still cite the 1.55 addresses.
+# Single source of truth for every scarce resource a mod can claim - Analog Four
+# MKII, OS 1.56. PORTED from the MK1 OS 1.56 registry (branch OS-1.56) on
+# 2026-10-21, docs/PORT-MK2.md: every claim below keeps its MK1 address in a
+# `# MK1:` line, and an `expect` that differs on the MKII keeps the MK1 bytes after
+# it. Other comments still describe the MK1 image unless they say MKII.
 #
-# Single source of truth for every scarce resource a mod can claim - Analog Four /
-# Analog Keys MK1, OS 1.56. Same rules as rytm1_mods-main's registry: tools/layout.py
-# asserts that no two claims overlap and that every claim sits inside its pool;
-# tools/build.py checks every `expect` against the stock bytes before patching.
+# Same rules as before: tools/layout.py asserts that no two claims overlap and that
+# every claim sits inside its pool; tools/build.py checks every `expect` against
+# the stock bytes before patching.
 #
 # owner = the mod directory name, or "reserved:<reason>".
 
 [meta]
 target = "OS1.56"
-device = "Analog Four / Analog Keys MK1"
+device = "Analog Four MKII"
 
 # ---------------------------------------------------------------- the image
 #
-# From the startup code (entry 0x40000e52, the image's first long):
-#   0x40000dc6  copies 0x40235000..0x4023c4a0 to SRAM 0x80000000 and
-#               0x4023c4a0..0x402437e0 (the image's end) to 0x80008000.
-#   0x40000e1c  zeroes 0x40235000..0x4260fb10: __bss_start = 0x40235000.
-# So everything at or above 0x40235000 is initialiser data and then .bss, and
-# NOTHING below it is .bss. tools/cavescan.py reads these bounds out of the image.
+# From the MKII startup code (entry 0x40001130, the image's first long):
+#   0x400010a4  copies 0x40253000..0x4025af68 to SRAM 0x80000000 and
+#               0x4025af68..0x40262e38 (the image's end) to 0x80008000.
+#   0x400010fa  zeroes 0x40253000..0x448b6d50: __bss_start = 0x40253000.
+# So everything at or above 0x40253000 is initialiser data and then .bss, and
+# NOTHING below it is .bss.
 #
-# THE TRAP, as on the Rytm MK1: 0x40226958..0x40233a30 is the bootstrap, embedded in
-# MAIN OS. At every boot 0x40000e6a compares its version word (0x40226958) with the
-# one in flash (0xfff8) and, if it is newer, 0x401006dc writes 0x40226960..0x40233a30
-# into the bootstrap sectors. A mod byte in that range could one day be written into
-# the recovery path. No pool may touch it, and build and verify assert its hash.
+# Unlike the MK1 there is no bootstrap inside MAIN OS: the MKII's bootstrap is
+# section 2 of the container, which no build touches (tools/verify.py compares it,
+# and every other section, with stock).
 
 # ---------------------------------------------------------------------- pools
 
 [[pool]]
 name   = "cave"
-start  = 0x40234860
-end    = 0x40235000          # exclusive; 1952 B
+start  = 0x40252940
+end    = 0x40253000          # exclusive; 1728 B
 status = "probably-verified"
 note   = """
-The A4 twin of the Rytm MK1's cave2 (which is the twin of MKII cave2, run on
-hardware with 0003 and 0004): alignment padding between the end of the read-only
-data and the first SRAM load image.
+The MKII twin of the MK1's `cave`: alignment padding between the end of the C++
+static-constructor table and the first SRAM load image.
 
-Evidence, all static, on this image (tools/cavescan.py):
-- 0x40234858..0x40235000 is zeros. The pool starts 8 bytes in to keep claims aligned.
-- Just below is the C++ static-constructor table: count 122 at 0x4023466c, entries
-  from 0x40234670, so it ends exactly at 0x40234858. Its only reader, 0x400ff76a,
-  loops by that count.
-- No 32-bit word at any even offset in the image points into 0x40234858..0x40235000.
-- 0x40235000 is where both the SRAM copy (0x40000dc6) and the .bss clear
-  (0x40000e1c) start; the gap is below both and nothing else writes it.
-
-"probably-verified" rather than "candidate" on the same complete static case the
-Rytm MK1 project used for its twin: below __bss_start, so nothing clears or reuses
-it; above the last constructor, so nothing reads it as a table; nothing points into
-it.
-
-Hardware, 2026-10-09: 0001 has run from here across three flashes - boot, menus,
-playing, step entry - with no fault.
+Evidence, all static, on the MKII 1.56 image (re/mk2/zeroruns.py):
+- 0x4025293c..0x40253000 is zeros. The pool starts 4 bytes in to keep claims
+  8-byte aligned.
+- Just below is the constructor table: count 132 at 0x40252728, entries from
+  0x4025272c, so it ends exactly at 0x4025293c. Its only reader, 0x40105fc0, loads
+  the count and loops by it.
+- The only 32-bit words in the image that point into 0x4025293c..0x40253000 are
+  0x40253000 itself (its end), at 0x400010a8 and 0x40001104 (the SRAM copy and the
+  .bss clear) and 0x40003adc / 0x40003b10 (a variable at 0x40253000, in .bss).
+- 0x40253000 is where both the SRAM copy and the .bss clear start; the gap is below
+  both and nothing else writes it.
+The MK1's twin (1952 B there) has run every mod on an MK1. On the MKII it has run
+the full build through docs/HWTEST-MK2.md on the owner's unit (2026-10-22).
 """
 
 [[pool]]
 name   = "cave2"
-start  = 0x400916c2
-end    = 0x400919b8          # exclusive; 758 B
+start  = 0x40093bb2
+end    = 0x40093ea8          # exclusive; 758 B
 stock  = "code"
-expect_sha256 = "af8e8d3a67794fb50100912fb20e970ae0d4b1a91cd3ab3ba1d57ded830d85ec"
+expect_sha256 = "f9d01c2c5154c1f94518285689f5cb1a752382837e775ee70f6fc984b6b354e9"
 status = "probably-verified"
 note   = """
-OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): a 758 B function nothing references (64-bit arithmetic); its 1.55 twin 0x40091382 is dead too.
-Evidence: no branch or call target, no 32-bit word anywhere in the image, and no
-case of any of the 63 switch tables lands in 0x400916c2..0x400919b8; the code region
-has no other computed-jump form. Never executed in six emulator sessions on stock
-1.56 (80 G instructions, 540 KB of code covered: every page, menus, sequencer,
-keyboard, playback). The same routines are unreferenced in 1.55.
-Not yet run on hardware: if one were called after all, mod code would run instead.
+MKII 1.56 dead code: the twin of the MK1's cave2 (a 758 B function, 64-bit
+arithmetic), matched by xmatch (vote 48 at its start).
+Evidence: re/mk2/deadscan_mk2.py on the MKII image - no branch or call target, no
+32-bit word anywhere in the image, and no case of any of its 74 switch tables lands
+in 0x40093bb2..0x40093ea8. The scan flags a computed jump in the routine before it
+(J), as it did on the MK1, where the run was also checked against emulator
+coverage.
+Emulator coverage (2026-10-21, rytm-emu dtboot with a block/step recorder, on
+stock MKII 1.56): never executed in six sessions, 108 G instructions (54 G
+executed), 34,677 distinct 16-byte code lines: boot, every synth page (pressed
+twice) with knob turns, FUNC + each page, FX/CV tracks, kit load/save/clear, sound
+browser, MIX, GLOBAL, TEMPO, NOTES setup, grid and live record, playback on five
+tracks, keyboard, ARP, pattern/bank changes, chains, song mode, PERF, copy/paste,
+MIDI input (not covered: USB, SysEx, the test menus). The same recorder shows the
+range running in the mod builds, so the 0 is real. Promoted to probably-verified on
+the owner's go-ahead (2026-10-21). Ran the full build on the owner's MKII through
+docs/HWTEST-MK2.md (2026-10-22).
 """
 
 [[pool]]
 name   = "cave3"
-start  = 0x401eeb08
-end    = 0x401eef08          # exclusive; 1024 B
+start  = 0x40215258
+end    = 0x40215658          # exclusive; 1024 B
 status = "probably-verified"
 note   = """
-The chorus gap of 1.55 (0x401ee578), moved +1424 with the chorus tables: 1,024
-zero bytes, no word in the image points into it; the chorus code is identical
-(same signed-byte indexing), and 0010's cho_gate clamps the one index that
-could reach it.
+The chorus gap, as on the MK1 (0x401eeb08 there): 1,024 zero bytes between the
+chorus's lookup tables. The only word in the image that points into or at it is
+0x40215658 (its end, the next table) at 0x400fe214, in the chorus code, which is
+the MK1's instruction for instruction (signed-byte indexing; 0010's cho_gate clamps
+the one index that could reach the gap).
 """
-
-
-# --------------------------------------------------------------------- claims
 
 [[pool]]
 name   = "cave4"
-start  = 0x40167326
-end    = 0x40167486          # exclusive; 352 B
+start  = 0x401845be
+end    = 0x4018471e          # exclusive; 352 B
 stock  = "code"
-expect_sha256 = "cb73b38b8e70c34deff867b97a980a5eff4568a448229894d90ac1b4df279e39"
+expect_sha256 = "418ecf1dab82e1df465fdcb2e34607ddf0163b39b4277ebfd15088ceadee8358"
 status = "probably-verified"
 note   = """
-OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 8 small string helpers beside string_from_cstr, none referenced.
-Evidence: no branch or call target, no 32-bit word anywhere in the image, and no
-case of any of the 63 switch tables lands in 0x40167326..0x40167486; the code region
-has no other computed-jump form. Never executed in six emulator sessions on stock
-1.56 (80 G instructions, 540 KB of code covered: every page, menus, sequencer,
-keyboard, playback). The same routines are unreferenced in 1.55.
-Not yet run on hardware: if one were called after all, mod code would run instead.
+MKII 1.56 dead code: 8 small string helpers just before string_from_cstr
+(0x4018471e), the twin of the MK1's cave4. re/mk2/deadscan_mk2.py: nothing
+references them.
+Emulator coverage (2026-10-21, rytm-emu dtboot with a block/step recorder, on
+stock MKII 1.56): never executed in six sessions, 108 G instructions (54 G
+executed), 34,677 distinct 16-byte code lines: boot, every synth page (pressed
+twice) with knob turns, FUNC + each page, FX/CV tracks, kit load/save/clear, sound
+browser, MIX, GLOBAL, TEMPO, NOTES setup, grid and live record, playback on five
+tracks, keyboard, ARP, pattern/bank changes, chains, song mode, PERF, copy/paste,
+MIDI input (not covered: USB, SysEx, the test menus). The same recorder shows the
+range running in the mod builds, so the 0 is real. Promoted to probably-verified on
+the owner's go-ahead (2026-10-21). Ran the full build on the owner's MKII through
+docs/HWTEST-MK2.md (2026-10-22).
 """
 
 [[pool]]
 name   = "cave5"
-start  = 0x4008e264
-end    = 0x4008e3bc          # exclusive; 344 B
+start  = 0x40090754
+end    = 0x400908ac          # exclusive; 344 B
 stock  = "code"
-expect_sha256 = "32a70d9b4376c16eedb4bdd9f9ac53b3e3cb8202b76f2097d3b02f55db979ebc"
+expect_sha256 = "7f8806d7213e35ffd8ce4d89d7408532022e26388da0bf19ca63cde7c9878128"
 status = "probably-verified"
 note   = """
-OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 12 wrapper functions, none referenced.
-Evidence: no branch or call target, no 32-bit word anywhere in the image, and no
-case of any of the 63 switch tables lands in 0x4008e264..0x4008e3bc; the code region
-has no other computed-jump form. Never executed in six emulator sessions on stock
-1.56 (80 G instructions, 540 KB of code covered: every page, menus, sequencer,
-keyboard, playback). The same routines are unreferenced in 1.55.
-Not yet run on hardware: if one were called after all, mod code would run instead.
+MKII 1.56 dead code: 12 wrapper functions, the twin of the MK1's cave5.
+re/mk2/deadscan_mk2.py: nothing references them.
+Emulator coverage (2026-10-21, rytm-emu dtboot with a block/step recorder, on
+stock MKII 1.56): never executed in six sessions, 108 G instructions (54 G
+executed), 34,677 distinct 16-byte code lines: boot, every synth page (pressed
+twice) with knob turns, FUNC + each page, FX/CV tracks, kit load/save/clear, sound
+browser, MIX, GLOBAL, TEMPO, NOTES setup, grid and live record, playback on five
+tracks, keyboard, ARP, pattern/bank changes, chains, song mode, PERF, copy/paste,
+MIDI input (not covered: USB, SysEx, the test menus). The same recorder shows the
+range running in the mod builds, so the 0 is real. Promoted to probably-verified on
+the owner's go-ahead (2026-10-21). Ran the full build on the owner's MKII through
+docs/HWTEST-MK2.md (2026-10-22).
 """
 
 [[pool]]
 name   = "cave6"
-start  = 0x400550a8
-end    = 0x400551e6          # exclusive; 318 B
+start  = 0x40056e14
+end    = 0x40056f52          # exclusive; 318 B
 stock  = "code"
-expect_sha256 = "736fe0cfdeb24b09d15b9e23f5968bfb29a1a36ce1787ddbbc7cc8a84e16d8b4"
+expect_sha256 = "d2cceab7c4baea35d682c1ecd3ce658808754647444ac55eb116a38bd61637aa"
 status = "probably-verified"
 note   = """
-OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 11 small accessors, none referenced.
-Evidence: no branch or call target, no 32-bit word anywhere in the image, and no
-case of any of the 63 switch tables lands in 0x400550a8..0x400551e6; the code region
-has no other computed-jump form. Never executed in six emulator sessions on stock
-1.56 (80 G instructions, 540 KB of code covered: every page, menus, sequencer,
-keyboard, playback). The same routines are unreferenced in 1.55.
-Not yet run on hardware: if one were called after all, mod code would run instead.
+MKII 1.56 dead code: 11 small accessors (the scan's run is 0x40056e12..0x40056f52;
+the pool starts at the next 4-byte boundary, as the MK1's did), the twin of the
+MK1's cave6. re/mk2/deadscan_mk2.py: nothing references them. (Emulator coverage
+and hardware below.)
+Emulator coverage (2026-10-21, rytm-emu dtboot with a block/step recorder, on
+stock MKII 1.56): never executed in six sessions, 108 G instructions (54 G
+executed), 34,677 distinct 16-byte code lines: boot, every synth page (pressed
+twice) with knob turns, FUNC + each page, FX/CV tracks, kit load/save/clear, sound
+browser, MIX, GLOBAL, TEMPO, NOTES setup, grid and live record, playback on five
+tracks, keyboard, ARP, pattern/bank changes, chains, song mode, PERF, copy/paste,
+MIDI input (not covered: USB, SysEx, the test menus). The same recorder shows the
+range running in the mod builds, so the 0 is real. Promoted to probably-verified on
+the owner's go-ahead (2026-10-21). Ran the full build on the owner's MKII through
+docs/HWTEST-MK2.md (2026-10-22).
 """
 
+[[pool]]
+name   = "cave7"
+start  = 0x400d3a52
+end    = 0x400d3b5e          # exclusive; 268 B
+stock  = "code"
+expect_sha256 = "114d87cb4058c40bbb216c338a92e21c57eaa5cfbd79df2018848d611943c0b8"
+status = "probably-verified"
+note   = """
+MKII 1.56 dead code, new on the MKII (the MK1 build did not need it): the start of
+a constructor (linkw %fp,#-36 at 0x400d3a52) that nothing calls. re/mk2/deadscan_mk2.py:
+no branch or call target and no 32-bit word in the image points into the run; it
+ends at 0x400d3b5e only because that is a branch target inside the same routine,
+whose remaining tail is then reachable from nowhere.
+Emulator coverage (2026-10-21, rytm-emu dtboot with a block/step recorder, on
+stock MKII 1.56): never executed in six sessions, 108 G instructions (54 G
+executed), 34,677 distinct 16-byte code lines: boot, every synth page (pressed
+twice) with knob turns, FUNC + each page, FX/CV tracks, kit load/save/clear, sound
+browser, MIX, GLOBAL, TEMPO, NOTES setup, grid and live record, playback on five
+tracks, keyboard, ARP, pattern/bank changes, chains, song mode, PERF, copy/paste,
+MIDI input (not covered: USB, SysEx, the test menus). The same recorder shows the
+range running in the mod builds, so the 0 is real. Promoted to probably-verified on
+the owner's go-ahead (2026-10-21). Ran the full build on the owner's MKII through
+docs/HWTEST-MK2.md (2026-10-22).
+"""
+
+# --------------------------------------------------------------------- claims
+
+
+# MK1: 0x40234860
 [[cave]]
 owner = "0001-scale-lock"
-addr  = 0x40234860
+addr  = 0x40252940
 size  = 0x2d0
 note  = "719 B: the six hooks (played notes, step entry, the NOTE encoder's three paths, KEY SCALE name), note_step, the track-lock lookup, the snap and the 35-entry scale remap."
 
@@ -150,18 +201,20 @@ note  = "719 B: the six hooks (played notes, step entry, the NOTE encoder's thre
 # note events reach. (The first build hooked handleNoteEvent 0x40060c20 instead,
 # which trig keys never pass through - found on hardware, 2026-10-09.) The jmp
 # covers `linkw %fp,#-88; moveq #127,%d0` exactly; both are re-emitted.
+# MK1: 0x400b9818
 [[detour]]
 owner  = "0001-scale-lock"
-addr   = 0x400b9818
+addr   = 0x400bce08
 size   = 6
 expect = "4e56ffa8707f"
 entry  = "play_gate"
 
 # Step entry (hold a trig + play a key): set_step_note at its entry. The jmp lands
 # across the prologue's lea and the first half of the moveml; both are re-emitted.
+# MK1: 0x400ac934
 [[detour]]
 owner  = "0001-scale-lock"
-addr   = 0x400ac934
+addr   = 0x400afa38
 size   = 6
 expect = "4feffff048d7041c"
 entry  = "step_gate"
@@ -170,9 +223,10 @@ entry  = "step_gate"
 # does. The stub rewrites the delta argument and continues into stock; both prologue
 # instructions are re-emitted. (The first two builds compared the id with 30, the
 # track's Level - NOTE is 19 - so this never fired; fixed 2026-10-09.)
+# MK1: 0x40022fb4
 [[detour]]
 owner  = "0001-scale-lock"
-addr   = 0x40022fb4
+addr   = 0x400232e2
 size   = 6
 expect = "4feffff448d7040c"
 entry  = "note_delta_gate"
@@ -180,9 +234,10 @@ entry  = "note_delta_gate"
 # The NOTE encoder with trigs held, per held trig: lock_delta_apply at its entry.
 # The jmp lands across the prologue's lea and the first half of the moveml; both
 # are re-emitted.
+# MK1: 0x40023518
 [[detour]]
 owner  = "0001-scale-lock"
-addr   = 0x40023518
+addr   = 0x4002388a
 size   = 6
 expect = "4feffff048d7041c"
 entry  = "lock_delta_gate"
@@ -192,9 +247,10 @@ entry  = "lock_delta_gate"
 # REIMPLEMENTED (for NOTE, note_step computes the new value; for anything else the
 # stub performs the stock add on a line of its own), so the displaced pair is not
 # present verbatim.
+# MK1: 0x40023c38
 [[detour]]
 owner  = "0001-scale-lock"
-addr   = 0x40023c38
+addr   = 0x40023faa
 size   = 6
 expect = "4fef000cd085"
 entry  = "lock_add_gate"
@@ -204,9 +260,10 @@ reemit = false
 # the stub pushes the name itself and re-emits only the first instruction. The
 # second, the indexed push, is REIMPLEMENTED (it would read past the copy for every
 # new value), so the displaced pair is not present verbatim.
+# MK1: 0x400d64c6
 [[detour]]
 owner  = "0001-scale-lock"
-addr   = 0x400d64c6
+addr   = 0x400dbc8a
 size   = 6
 expect = "206e00142f360cf4"
 entry  = "key_scale_name"
@@ -216,36 +273,40 @@ reemit = false
 # A measuring build (`make probe`), not in the default image. Its code is the first
 # to run from cave2.
 
+# MK1: 0x40234b30
 [[cave]]
 owner = "0006-fx-slot"
-addr  = 0x40234b30
+addr  = 0x40252c10
 size  = 0x60
 note  = "The three FX copier gates and their shared spare-word copy."
 
 # fx_copy entry: the 32 spare bytes at offset 24 are copied too, then the prologue
 # (lea %sp@(-32),%sp; moveml %d2-%d4/%a2-%fp,%sp@) is re-emitted. This is what
 # makes the kit's spare FX words survive save, power-off and reload.
+# MK1: 0x40009028
 [[detour]]
 owner  = "0006-fx-slot"
-addr   = 0x40009028
+addr   = 0x40009300
 size   = 6
 expect = "4fefffe048d77c1c"
 entry  = "copy_gate"
 
 # fx_copy_v2 entry (the kit-load copier): the spare bytes again, from version-2
 # sources only, then lea %sp@(-36),%sp; moveml %d2-%d5/%a2-%fp,%sp@ re-emitted.
+# MK1: 0x4000c91a
 [[detour]]
 owner  = "0006-fx-slot"
-addr   = 0x4000c91a
+addr   = 0x4000cbf2
 size   = 6
 expect = "4fefffdc48d77c3c"
 entry  = "copy2_gate"
 
 # fx_copy_v4 entry (working kit -> storage kit: the save): the spare bytes from
 # version-4 sources, then lea %sp@(-32),%sp; moveml %d2-%d4/%a2-%fp,%sp@ re-emitted.
+# MK1: 0x4000891a
 [[detour]]
 owner  = "0006-fx-slot"
-addr   = 0x4000891a
+addr   = 0x40008bf2
 size   = 6
 expect = "4fefffe048d77c1c"
 entry  = "copy4_gate"
@@ -255,109 +316,125 @@ entry  = "copy4_gate"
 
 # ------------------------------------------------------------ 0007 digital path
 # Not in the default image (`make full`). Takes all of cave2; the two probes
-# that also live there are declared exclusive. Its capture buffers and SRR state
-# are DDR at 0x4680c000..0x4680c220, after 0006's comb lines in the same
-# unreferenced gap (0x46803000..0x4680ffff).
+# that also live there are declared exclusive. MKII: its capture buffers and SRR
+# state are DDR at 0x47be0000..0x47be02e0 (free DDR, see the stub), not the MK1's
+# 0x4680c000 gap.
 
+# MK1: 0x400916c2
 [[cave]]
 owner   = "0007-digital-path"
-addr    = 0x400916c2
+addr    = 0x40093bb2
 size    = 0x2f6
 note    = "OS 1.56: the dry mute and the FX block capture/distortion (section .text) in dead code (cave2)."
 
+# MK1: 0x400550a8
 [[cave]]
 owner   = "0007-digital-path"
 section = ".dsp2"
-addr    = 0x400550a8
+addr    = 0x40056e14
 size    = 0x13e
 note    = "OS 1.56: the FX block output and the small shared helpers (fx_S, find, key_find) in dead code (cave6)."
 
+# MK1: 0x40167326
 [[cave]]
 owner   = "0007-digital-path"
 section = ".ui3"
-addr    = 0x40167326
+addr    = 0x401845be
 size    = 0x160
 note    = "OS 1.56: slot_of and the page_get_value / encoder gates in dead code (cave4)."
 
+# MK1: 0x4008e264
 [[cave]]
 owner   = "0007-digital-path"
 section = ".ui4"
-addr    = 0x4008e264
+addr    = 0x40090754
 size    = 0x158
 note    = "OS 1.56: the label gates, kit_notify, the layer table and its names in dead code (cave5)."
 
+# track_levels: movel %a3@,%d0; macl %d0,%d7,%acc0, re-emitted. MKII registers a3/d7
+# (MK1 a2/d5); the dry VCA words go to 0x80003d6c + 26 * track (MK1 0x800032b0).
+# MK1: 0x400f48ee, expect 2012aa000800
 [[detour]]
 owner  = "0007-digital-path"
-addr   = 0x400f48ee
+addr   = 0x400fa6c4
 size   = 6
-expect = "2012aa000800"
+expect = "2013ae000800"
 entry  = "dry_gate"
 
 # fx_block entry: lea %sp@(-140),%sp; moveml %d2-%d7/%a2-%fp,%sp@, re-emitted first.
+# MK1: 0x400f8930
 [[detour]]
 owner  = "0007-digital-path"
-addr   = 0x400f8930
+addr   = 0x400fe73c
 size   = 6
 expect = "4fefff7448d77cfc"
 entry  = "fxin_gate"
 
-# fx_block after its output loop: movel %d0,0x415c0004, re-emitted first.
+# fx_block after its output loop: movel %d0,0x41864a74, re-emitted first.
+# MK1: 0x400f8cc0
 [[detour]]
 owner  = "0007-digital-path"
-addr   = 0x400f8cc0
+addr   = 0x400feace
 size   = 6
-expect = "23c0415c0008"
+expect = "23c041864a74"   # MK1: 23c0415c0008
 entry  = "fxout_gate"
 
 # page_get_value entry: lea %sp@(-12),%sp; moveml %d2-%d3/%a2,%sp@.
+# MK1: 0x400239e2
 [[detour]]
 owner  = "0007-digital-path"
-addr   = 0x400239e2
+addr   = 0x40023d54
 size   = 6
 expect = "4feffff448d7040c"
 entry  = "pgv_gate"
 
 # The encoder handler's call of param_apply_delta: moveal %a0@(88),%a0; jsr %a0@.
+# MK1: 0x40025a56
 [[detour]]
 owner  = "0007-digital-path"
-addr   = 0x40025a56
+addr   = 0x40025d20
 size   = 6
 expect = "206800584e90"
 entry  = "enc_gate"
 
 # param_label entry: movel %d3,%sp@-; movel %d2,%sp@-; movel %sp@(20),%d2.
+# MKII: vtable +0x78 of the parameter sets (MK1 +0x84); same arguments.
+# MK1: 0x4009bac4
 [[detour]]
 owner  = "0007-digital-path"
-addr   = 0x4009bac4
+addr   = 0x4009ea68
 size   = 6
 expect = "2f032f02242f0014"
 entry  = "lbl_gate"
+
 
 # ------------------------------------------------------------ 0002 303 slide
 # Not in the default image (`make full`). In `cave` after 0006. After it,
 # 0x40234cc8 is 0008's. (The 303 mode that briefly followed was rolled back on
 # 2026-10-11.)
-
+# MK1: 0x40234b90
 [[cave]]
 owner = "0002-slide-303"
-addr  = 0x40234b90
+addr  = 0x40252c70
 size  = 0x138
 note  = "The slide gate in trig_fire: slide-from flag and the tie length; the look-ahead gate for legato."
 
 # trig_fire after LEN: lea %a2@(0,%a3:l),%a0; tstb %a0@(458), both re-emitted last
 # so the beqs after them sees the tst's flags.
+# MK1: 0x40077fa0
 [[detour]]
 owner  = "0002-slide-303"
-addr   = 0x40077fa0
+addr   = 0x4007a48c
 size   = 6
 expect = "41f2b8004a2801ca"
 entry  = "slide_gate"
 
 # trig_fire's note-slide look-ahead: lea %a3@(0,%d0:l:2),%a0; moveq #16,%d6, both
 # re-emitted first.
+# MK1: 0x40078306
 [[detour]]
 owner  = "0002-slide-303"
-addr   = 0x40078306
+addr   = 0x4007a7f2
 size   = 6
 expect = "41f30a007c10"
 entry  = "look_gate"
@@ -366,174 +443,217 @@ entry  = "look_gate"
 # Not in the default image (`make full`). In `cave` after 0002. See
 # mods/0008-pages/design.md for the page machinery.
 
+# MK1: 0x40234cc8
 [[cave]]
 owner = "0008-pages"
-addr  = 0x40234cc8
-size  = 0xd4
+addr  = 0x40252da8
+size  = 0xe8
 note  = "The DIST page: its view's construction at startup, the AMP key's slot list, the knob-draw and held-trig gates, shared_is_p17."
 
 # The startup view builder after slot 28 is filed: lea %sp@(12),%sp; moveal
 # %fp@(8),%a0, both re-emitted around building slot 29's view.
+# MK1: 0x400bee4a
 [[detour]]
 owner  = "0008-pages"
-addr   = 0x400bee4a
+addr   = 0x400c2370
 size   = 6
 expect = "4fef000c206e0008"
 entry  = "page_build"
 
 # The knob draw (vtable +0xa0 of every page view) entry: linkw %fp,#-68; moveb
 # %fp@(43),%d0, both re-emitted.
+# MK1: 0x4002318e
 [[detour]]
 owner  = "0008-pages"
-addr   = 0x4002318e
+addr   = 0x400234c4
 size   = 6
-expect = "4e56ffbc102e002b"
+expect = "4fefffbc48d77cfc"   # MK1: 4e56ffbc102e002b
 entry  = "knob_gate"
 
 # The encoder handler's held-trig call: moveal %a0@(124),%a0; jsr %a0@.
+# MK1: 0x40025a06
 [[detour]]
 owner  = "0008-pages"
-addr   = 0x40025a06
+addr   = 0x40025cd4
 size   = 6
 expect = "2068007c4e90"
 entry  = "held_gate"
 
-# (0007) The parameter sets' short-name getter (vtable +0x74): movel %sp@(8),%d0;
-# cmpil #295,%d0, re-emitted. On the DIST page it returns our knob names.
+# (0007) The parameter sets' short-name getter (vtable +0x68 on the MKII, +0x74 on
+# the MK1): movel %sp@(8),%d0; cmpil #295,%d0, re-emitted. On the DIST page it
+# returns our knob names.
+# MK1: 0x4009b7be
 [[detour]]
 owner  = "0007-digital-path"
-addr   = 0x4009b7be
+addr   = 0x4009e79e
 size   = 6
 expect = "202f00080c8000000127"
 entry  = "sname_gate"
 
 # set_slot (0x400aa8c2): the clamp's two moveq #28 -> #29, so slot 29 is kept.
+# MK1: 0x400aacc8
 [[patch]]
 owner   = "0008-pages"
-addr    = 0x400aacc8
+addr    = 0x400add22
 size    = 2
 expect  = "701c"
 replace = "701d"
 
+# MK1: 0x400aacce
 [[patch]]
 owner   = "0008-pages"
-addr    = 0x400aacce
+addr    = 0x400add28
 size    = 2
 expect  = "741c"
 replace = "741d"
 
 # The AMP key's binding ({1, 54}): its slot range [0x40187ff8, 0x40187ffc) = [10]
 # -> amp_slots [10, 29]. The two pea operands, end first.
+# MK1: 0x400be478
 [[patch]]
 owner       = "0008-pages"
-addr        = 0x400be478
+addr        = 0x400c19a2
 size        = 4
-expect      = "4018858c"
+expect      = "401a6440"   # MK1: 4018858c
 from_symbol = "amp_slots_end"
 
+# MK1: 0x400be47e
 [[patch]]
 owner       = "0008-pages"
-addr        = 0x400be47e
+addr        = 0x400c19a8
 size        = 4
-expect      = "40188588"
+expect      = "401a643c"   # MK1: 40188588
 from_symbol = "amp_slots"
 
 # page_info(17) = 0x40194a14 + 44 * 17 = 0x40194d00, the blank descriptor: the name ...
+# MK1: 0x40195290
 [[patch]]
 owner       = "0008-pages"
-addr        = 0x40195290
+addr        = 0x401b34d4
 size        = 4
-expect      = "4019c5aa"
+expect      = "401be268"   # MK1: 4019c5aa
 from_symbol = "s_dist"
 
-# ... and its ten knob ids: DIG CHR DRV BIT SRR / LEV SLD - - -, ids 50 92 94 95
-# 96 / 98 63 (50 and 63 = OSC AM1/AM2, drawn as switches; the rest AMP dials),
+# MKII: page_info(11), AMP: its title becomes "AMP (P 1/2)", as the MKII titles
+# every page that shares a key with another (OSC 1 (P 1/2), NOISE (P 2/2)...).
+[[patch]]
+owner       = "0008-pages"
+addr        = 0x401b33cc
+size        = 4
+expect      = "401bfab0"
+from_symbol = "s_amp"
+
+# ... and its ten knob ids: DIG CHR DRV BIT SRR / LEV SLD - - -, ids 50 97 94 95
+# 96 / 98 63 (50 and 63 = OSC AM1/AM2, drawn as switches; 97 = AMP PAN, whose
+# marker shows CHR's three positions; the rest AMP level bars). MK1: CHR = 92 (AMP
+# REL); on the MKII REL is part of the AMP envelope graph and draws nothing alone.
 # which 0007's layer table maps to its settings on this page.
+# MK1: 0x40195294
 [[patch]]
 owner   = "0008-pages"
-addr    = 0x40195294
+addr    = 0x401b34d8
 size    = 4
 expect  = "00000000"
 replace = "00000032"
 
 # Knobs 2..7 belong to 0007's settings: with its three characters (chr = 1) CHR DRV
 # BIT SRR / LEV SLD; HARD only (chr = 0) the page closes up without CHR.
+# MK1: 0x40195298
 [[patch]]
 owner   = "0007-digital-path"
-addr    = 0x40195298
+addr    = 0x401b34dc
 size    = 24
 expect  = "000000000000000000000000000000000000000000000000"
-replace = "0000005c0000005e0000005f00000060000000620000003f"
+replace = "000000610000005e0000005f00000060000000620000003f"
 gate    = "chr"
 
+# MK1: 0x40195298
 [[patch]]
 owner   = "0007-digital-path"
-addr    = 0x40195298
+addr    = 0x401b34dc
 size    = 24
 expect  = "000000000000000000000000000000000000000000000000"
 replace = "0000005e0000005f00000060000000620000003f00000000"
 gate    = "!chr"
 
-# ------------------------------------------------------------ 0007, part 2
-# cave2 is full (0007's .text fills it to the byte): its label lookup sits in `cave`
-# after 0008, as section .ui2.
 
+
+# ------------------------------------------------------------ 0007, part 2
+# cave2 is full: the settings' storage helpers (slot_rd / slot_wr, section .ui2)
+# sit in `cave` after 0008. On the MKII `cave` is 224 B smaller than the MK1's, so
+# the label lookup name_of and its names moved to cave7 as section .ui5.
+# MK1: one .ui2 claim at 0x40234d9c, size 0x1b4
 [[cave]]
 owner   = "0007-digital-path"
 section = ".ui2"
-addr    = 0x40234d9c
-size    = 0x1b4
-note    = "name_of (the knob labels on the DIST and NOISE pages, SHP / FLD / FM with WAV on) and slot_rd / slot_wr (a kit byte, or a sound's WAV word)."
+addr    = 0x40252e90
+size    = 0xc0
+note    = "slot_rd / slot_wr (a kit byte, or a sound's WAV word), snd_word and the NOISE page's SHP / FLD / FM strings."
+
+# MKII only.
+[[cave]]
+owner   = "0007-digital-path"
+section = ".ui5"
+addr    = 0x400d3a52
+size    = 0x10c
+note    = "name_of (the knob labels on the DIST and NOISE pages, SHP / FLD / FM with WAV on) and the mode / chord names, in dead code (cave7)."
 
 # ------------------------------------------------------------ 0010 wave oscillator
-# Not in the default image (`make full`). In `cave` after 0007's part 2, and in
-# cave3 (the chorus gap). 0x40234fdc..0x40235000 (36 B) of `cave` and 0x401ee908..0x401ee978 (112 B) of cave3 are free.
-
+# Not in the default image (`make full`). In `cave` after 0007's part 2, which on
+# the MKII fills `cave` to its end, and in cave3 (the chorus gap).
+# MK1: 0x40234f50
 [[cave]]
 owner = "0010-wave-osc"
-addr  = 0x40234f50
+addr  = 0x40252f50
 size  = 0xb0
-note  = "The noise-mix, fade-envelope and sound-converter gates. The oscillator is in cave3 (the chorus gap); its state is in free DDR (0x46803000)."
+note  = "The noise-mix, fade-envelope and sound-converter gates. The oscillator is in cave3 (the chorus gap); its state is in free DDR (MKII 0x47be1000; MK1 0x46803000)."
 
+# MK1: 0x401eeb08
 [[cave]]
 owner   = "0010-wave-osc"
 section = ".gap"
-addr    = 0x401eeb08
+addr    = 0x40215258
 size    = 0x400
 note    = "The oscillator: two-wave blend, chords, fold, FM (sine at OSC2's pitch); the chorus index clamp."
 
-# The chorus's index load: mvsb 0x8000517e,%d0, re-emitted with a clamp to >= 0.
+# The chorus's index load: mvsb 0x80005c3e,%d0 (MK1 0x8000517e), re-emitted with a
+# clamp to >= 0. On the MKII the index scales into the table at 0x40215658, right
+# above the gap.
+# MK1: 0x400f8400
 [[detour]]
 owner  = "0010-wave-osc"
-addr   = 0x400f8400
+addr   = 0x400fe20c
 size   = 6
-expect = "71398000517e"
+expect = "713980005c3e"   # MK1: 71398000517e
 entry  = "cho_gate"
 
 # The noise generator, between the fade envelope update and the levels taken from
-# the envelopes: lea 0x80001be8,%a0, re-emitted. WAV voices get a full envelope (no
+# the envelopes: lea 0x80002be8,%a0 (MK1 0x80001be8), re-emitted. WAV voices get a full envelope (no
 # fade), so FAD is free to be their FM depth.
+# MK1: 0x400fa094
 [[detour]]
 owner  = "0010-wave-osc"
-addr   = 0x400fa094
+addr   = 0x400ffe04
 size   = 6
-expect = "41f980001be8"
+expect = "41f980002be8"   # MK1: 41f980001be8
 entry  = "fad_gate"
 
-# The noise generator's final mix: lea 0x800050e8,%a1, re-emitted.
+# The noise generator's final mix: lea 0x80005ba8,%a1 (MK1 0x800050e8), re-emitted.
+# MK1: 0x400fa0e0
 [[detour]]
 owner  = "0010-wave-osc"
-addr   = 0x400fa0e0
+addr   = 0x400ffe50
 size   = 6
-expect = "43f9800050e8"
+expect = "43f980005ba8"   # MK1: 43f9800050e8
 entry  = "wave_gate"
 
 # The sound converter (350-byte record -> the live 338-byte format) skips parameter
 # word 103, where WAV lives: lea %sp@(-28),%sp; moveml %d2-%d3/%a2-%fp,%sp@,
 # re-emitted.
+# MK1: 0x40008530
 [[detour]]
 owner  = "0010-wave-osc"
-addr   = 0x40008530
+addr   = 0x40008808
 size   = 6
 expect = "4fefffe448d77c0c"
 entry  = "conv_gate"
@@ -541,40 +661,45 @@ entry  = "conv_gate"
 # The NOISE page's empty knobs (page 7's ids [74, 75, 76, 0, 77, 0..]): the 4th = 92
 # (AMP REL, a dial), the mode OFF/WAV/CHD; the 6th = 94 (AMP CHO, a dial), the
 # chord type. 0007's layer table maps both to fields of the sound's word 103.
+# MK1: 0x401950e8
 [[patch]]
 owner   = "0010-wave-osc"
-addr    = 0x401950e8
+addr    = 0x401b332c
 size    = 4
 expect  = "00000000"
 replace = "0000005c"
 
+# MK1: 0x401950f0
 [[patch]]
 owner   = "0010-wave-osc"
-addr    = 0x401950f0
+addr    = 0x401b3334
 size    = 4
 expect  = "00000000"
 replace = "0000005e"
 
 # ------------------------------------------------------------ 0001, menu patches
 # KEY SCALE range 0..2 -> 0..35, in the menu setter (both moveq of its clamp) ...
+# MK1: 0x400b29d4
 [[patch]]
 owner   = "0001-scale-lock"
-addr    = 0x400b29d4
+addr    = 0x400b5ad8
 size    = 2
 expect  = "7002"
 replace = "7023"
 
+# MK1: 0x400b29da
 [[patch]]
 owner   = "0001-scale-lock"
-addr    = 0x400b29da
+addr    = 0x400b5ade
 size    = 2
 expect  = "7402"
 replace = "7423"
 
 # ... and in the pattern-load sanitiser, which would otherwise reset 3..35 to OFF.
+# MK1: 0x40009730
 [[patch]]
 owner   = "0001-scale-lock"
-addr    = 0x40009730
+addr    = 0x40009a08
 size    = 2
 expect  = "7402"
 replace = "7423"
@@ -582,16 +707,18 @@ replace = "7423"
 # key_offset (transposition): values 3..35 take the MAJ arm (12 - key) instead of 0.
 # Stock: v == 1 -> MAJ, v == 2 -> MIN, else 0. Patched: 1 - v > 0 (v <= 0) -> 0,
 # then 2 - v != 0 -> MAJ, so 2 alone falls through to MIN.
+# MK1: 0x40077a4e
 [[patch]]
 owner   = "0001-scale-lock"
-addr    = 0x40077a4e
+addr    = 0x40079f3a
 size    = 2
 expect  = "6714"
 replace = "6e20"
 
+# MK1: 0x40077a56
 [[patch]]
 owner   = "0001-scale-lock"
-addr    = 0x40077a56
+addr    = 0x40079f42
 size    = 2
 expect  = "6618"
 replace = "660c"

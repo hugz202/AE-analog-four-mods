@@ -29,6 +29,10 @@ def flat(syms: dict) -> dict[str, tuple[int, str, str]]:
                 raise ValueError(f"{name!r}: image must be one of {IMAGES}, got {image!r}")
             if image != "mainos":
                 continue
+            if entry.get("mk2_pending"):
+                # Still the MK1 address: left out, so a stub that needs it fails to
+                # assemble instead of jumping into the wrong code on the MKII.
+                continue
             value = entry["addr"] if kind != "const" else entry["value"]
             if name in out:
                 raise ValueError(f"duplicate symbol {name!r}")

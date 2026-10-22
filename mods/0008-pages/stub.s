@@ -26,9 +26,9 @@
         .equ    ID_MODE,        92                 | 0010's knobs on the NOISE page
         .equ    ID_CHORD,       94
         .equ    TAG_AMP,        0x36               | the AMP view's tag
-        .equ    VIEW_SIZE,      0x260
-        .equ    VIEW_MAP,       436                | controller + 436
-        .equ    PPV_VTABLE,     0x40170524         | plain ParameterPageView
+        .equ    VIEW_SIZE,      0x1c4              | MKII (the MK1's views are 0x260)
+        .equ    VIEW_MAP,       444                | controller + 444 (MK1: + 436)
+        .equ    PPV_VTABLE,     0x4018d650         | plain ParameterPageView (MK1: 0x40170524)
         .equ    VIEW_PAGE,      128
 
         .text
@@ -48,7 +48,7 @@ shared_view_page:
         rts
 
         | ------------------------------------------------------------------
-        | The startup view builder, after slot 28 is filed (0x400be9ce). Its
+        | The startup view builder, after slot 28 is filed (MKII 0x400c236e). Its
         | helpers are still in registers: a2 = operator new, a4 = the map
         | entry assign, a5 = the map's operator[], a3 = the shared_ptr release
         | it runs after each assign; d2 = &its shared_ptr temp, d3 = &the key
@@ -91,14 +91,15 @@ page_build:
 
         | ------------------------------------------------------------------
         | The knob draw (vtable +0xa0 of every page view), at its entry:
-        | 4(%sp) = the view. d0 and a0 are free here.
+        | 4(%sp) = the view. d0 is free here. The MKII builds this frame
+        | without a frame pointer (the MK1: link %fp,#-68; move.b 43(%fp),%d0).
         | ------------------------------------------------------------------
         .align  2
 knob_gate:
         move.l  4(%sp),%d0
         move.l  %d0,shared_draw_view
-        link    %fp,#-68                          | displaced
-        move.b  43(%fp),%d0                       | displaced
+        lea     -68(%sp),%sp                      | displaced
+        movem.l %d2-%d7/%a2-%a6,(%sp)             | displaced
         jmp     knob_draw_resume
 
         | ------------------------------------------------------------------
@@ -135,6 +136,7 @@ held_gate:
         .align  2
 amp_slots:      .long   10, SLOT_DIST             | the AMP key: AMP, then DIST
 amp_slots_end:
-s_dist:         .asciz  "DIST"
+s_dist:         .asciz  "DIST (P 2/2)"            | the MKII's page title style
+s_amp:          .asciz  "AMP (P 1/2)"
         .align  2
 shared_draw_view:   .long 0                       | the view whose knobs were drawn last

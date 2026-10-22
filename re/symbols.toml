@@ -1,13 +1,15 @@
-# Analog Four / Analog Keys MK1 symbol map, OS 1.56.
+# Analog Four MKII symbol map, OS 1.56.
 #
-# PORTED from the OS 1.55 map (2026-10-17, docs/PORT-1.56.md): every addr below
-# was mapped into 1.56 (re/os156/map156.py) and checked; the evidence texts
-# still cite the 1.55 addresses they were found at.
+# PORTED from the MK1 OS 1.56 map (branch OS-1.56) on 2026-10-21, docs/PORT-MK2.md.
+# The MKII OS is the MK1's code base compiled separately: every addr below was
+# matched from the MK1 1.56 image into the MKII 1.56 image (re/mk2/map_mk2.py,
+# tools/xmatch.py k-gram vote plus a listing comparison) and then checked; each
+# entry keeps its MK1 address as mk1 = ... and says how it was matched in mk2 = ....
+# The status and evidence texts are the MK1's and still cite MK1 (often 1.55)
+# addresses; the MK2 notes say what changed. Entries marked mk2_pending = true
+# still hold the MK1 address and are left out of build/symbols.inc.
 #
 # Addresses are virtual (load base 0x40000400); file_offset = addr - 0x40000400.
-# Everything here was read in THIS image (build/mainos.dis, `make disasm`). Where an
-# address was found by matching the Rytm MK1 1.73 image with tools/xmatch.py, the
-# Rytm address is recorded as ar1 = ...; the two are the same Elektron code base.
 #
 # status = "verified"  found in this image AND its behaviour read and checked
 #          "mapped"    a routine starts there and it fits, but not read in full
@@ -15,39 +17,54 @@
 
 [meta]
 target        = "OS1.56"
-device        = "Analog Four / Analog Keys MK1"
+device        = "Analog Four MKII"
+out_prefix    = "A4MK2"
+stock_syx     = "Analog-Four_MKII_OS1.56.syx"
 base          = 0x40000400
-mainos_size   = 2372584
-mainos_sha256 = "cc19347b11d220aba73e4fd7203b2ce4e6d6d9553308d713648885682c714c26"
+mainos_size   = 2500408
+mainos_sha256 = "748fec15ddc61bc3ff66047facba74328934c5fb59f427ddaf34a4e2629a474c"
 
-# As on the Rytm MK1 the container carries ONE section, MAIN OS, and the bootstrap
-# rides inside it. The startup code (0x40000e6a) compares the version word at
-# 0x40226958 with flash 0xfff8 and, if the embedded one is newer, 0x401006dc writes
-# 0x40226960..0x40233a30 (its loop bound, cmpil at 0x401007d4) into the bootstrap
-# sectors. See docs/HAZARDS.md.
-embedded_bootstrap_start  = 0x40226ee8          # version words, then the image
-embedded_bootstrap_end    = 0x40233fc0          # exclusive; the flasher's loop bound
-embedded_bootstrap_sha256 = "24c04cc5000b893c4faf0bda2db559ce4971a1b3df91f612bcd5fb48dffb5924"
+# The MKII container is ELE3 with five sections: 5 meta, 2 the bootstrap (the
+# STARTUP menu and its MIDI OS UPGRADE, loaded at 0x06010000), 1 the FPGA
+# bitstream, 3 MAIN OS and 8 a panel MCU image. Unlike the MK1 the bootstrap is
+# NOT inside MAIN OS (the image holds no copy of it), so there is no embedded range
+# to guard; build and verify instead require every section but MAIN OS to come back
+# byte for byte. See docs/HAZARDS.md.
+other_sections = ["section_1_FPGA.bin", "section_2_bootstrap.bin",
+                  "section_5_meta.raw", "section_8_?.bin"]
 
-# ColdFire V4e with EMAC, no FPU, as the Rytm MK1 (same platform; the image uses
-# mvz/mvs and remsl/mulsl, and no FPU instructions).
-cpu = "5475"
-cpu_flags = ["-mno-float"]
+# The bootstrap copies the packed MAIN OS section from flash (container offset +
+# 0x80000) to `stage` and depacks it to `base` in place, over its own input; the
+# OS keeps its voice calibration record from flash 0x300000. tools/verify.py checks
+# both on every build.
+stage       = 0x40200000
+flash_at    = 0x80000
+flash_limit = 0x300000
+
+# ColdFire V4 (MCF5441x family) with EMAC and no FPU, as the Analog Rytm MKII.
+cpu = "54455"
+cpu_flags = []
 
 # ======================================================================== core
 [fn.project_singleton]
-addr = 0x4012e890
+addr = 0x401494de
+mk1 = 0x4012e890
+mk2 = "checked by hand against the MK1 listing: listing identical apart from addresses; the project is 0x3df14 B here (MK1 0x3de9c)"
 status = "verified"
 evidence = "Lazy construction (tstl 0x415cba24, allocate 0x3de9c) and the first call of every NOTE SETUP getter/setter thunk (0x400d5f58 etc.), exactly as the Rytm's project_singleton."
 
 [fn.current_track_pattern]
-addr = 0x400a2fb8
+addr = 0x400a5f80
+mk1 = 0x400a2fb8
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 22.1, listing diffs 1/17"
 ar1 = 0x400ac2e8
 status = "verified"
 evidence = "track_index_of(this + 48) = 0x400aa78c, then the active-pattern getter 0x400a2bbe, then pattern_track 0x4009ebe4 - the Rytm routine instruction for instruction. Every NOTE SETUP thunk calls it on project_singleton's result."
 
 [fn.track_index_of]
-addr = 0x400aab78
+addr = 0x400adbd2
+mk1 = 0x400aab78
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 22.2, listing diffs 0/17"
 ar1 = 0x400b3a04
 status = "verified"
 evidence = "Called as track_index_of(sel) on this+48 by current_track_pattern, and on view+116 by param_apply_delta - the Rytm's two uses."
@@ -56,40 +73,54 @@ evidence = "Called as track_index_of(sel) on this+48 by current_track_pattern, a
 # Linked into 1.55 but never called: no jsr/lea/data word anywhere refers to these
 # routines or to the two name tables. Shared Elektron library code.
 [fn.in_scale]
-addr = 0x4007ed90
+addr = 0x40081280
+mk1 = 0x4007ed90
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 sig = "bool(int note, int key, int scale)"
 evidence = "note > 127 -> 0; scale == -1 -> 1; reduces note - key into 0..11 by +-12 steps, then tests scale_table[scale * 13 + interval] != 0."
 
 [fn.scale_degree]
-addr = 0x4007ee06
+addr = 0x400812f6
+mk1 = 0x4007ee06
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 sig = "int(int note, int key, int scale)"
 evidence = "scale_table[scale * 13 + interval] - 1; scale == -1 -> note - key."
 
 [fn.scale_quantize]
-addr = 0x4007ef6a
+addr = 0x4008145a
+mk1 = 0x4007ef6a
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 sig = "int(int note, int transpose, int key, int scale)"
 evidence = "n = note + transpose; scale == -1 -> n; else the first of n+0, n-1, n+1, n-2, n+2 (offset table 0x40180850..0x40180864) for which in_scale(n', transpose + key, scale), else -1."
 
 [fn.scale_short_name]
-addr = 0x4007efc6
+addr = 0x400814b6
+mk1 = 0x4007efc6
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 40.4, listing diffs 0/17"
 status = "verified"
 evidence = "Returns scale_short_names[i]."
 
 [data.scale_table]
-addr = 0x40181d80
+addr = 0x4019fadc
+mk1 = 0x40181d80
+mk2 = "mapped from the MK1 1.56 image: data refs 2/2"
 status = "verified"
 evidence = "35 rows of 13 bytes: degree + 1 at each in-scale interval (0..12), 0 elsewhere. Row 0 is Ionian ... row 34 Locr. bb3 bb7 - the scale index is the name-table index - 1, Chromatic being -1."
 
 [data.scale_short_names]
-addr = 0x401edf08
+addr = 0x402148e4
+mk1 = 0x401edf08
+mk2 = "mapped from the MK1 1.56 image: data refs 1/1"
 status = "verified"
 evidence = "36 string pointers CHRO, ION, DOR, PHRY, LYD, MIXO, AEOL, LOCR ... LO37, indexed by name index (Chromatic = 0)."
 
 [data.scale_long_names]
-addr = 0x401ede78
+addr = 0x40214854
+mk1 = 0x401ede78
+mk2 = "mapped from the MK1 1.56 image: data refs 1/1"
 status = "verified"
 evidence = "36 string pointers Chromatic ... Locr. bb3 bb7."
 
@@ -105,49 +136,67 @@ status = "verified"
 evidence = "key_scale_get 0x400b259a: mvsb %a0@(457); its setter 0x400b25ca clamps 0..2 (OFF/MAJ/MIN)."
 
 [fn.key_note_get]
-addr = 0x400b28ec
+addr = 0x400b59f0
+mk1 = 0x400b28ec
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 21.2, listing diffs 0/17"
 status = "verified"
 evidence = "(TrackPattern accessor) -> vtable[0x28] storage -> mvsb +0x1c8; 0 if no storage."
 
 [fn.key_scale_get]
-addr = 0x400b298e
+addr = 0x400b5a92
+mk1 = 0x400b298e
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 13.0, listing diffs 0/17"
 status = "verified"
 evidence = "As key_note_get, +0x1c9. Its only callers are the NOTE SETUP menu (0x400d6044, 0x400d60a0)."
 
 [data.key_scale_names]
-addr = 0x4018e2f0
+addr = 0x401ac544
+mk1 = 0x4018e2f0
+mk2 = "mapped from the MK1 1.56 image: data refs 1/1"
 status = "verified"
 evidence = "3 pointers OFF, MAJ, MIN; copied to a stack array by the KEY SCALE value draw 0x400d601c."
 
 [fn.key_scale_draw]
-addr = 0x400d6498
+addr = 0x400dbc5c
+mk1 = 0x400d6498
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 21.3, listing diffs 0/17"
 status = "verified"
 evidence = "NOTE SETUP KEY SCALE value: copies key_scale_names to %fp@(-12), key_scale_get on the current track, and draws names[v] with \"%s\" through 0x40058cc4 (args: canvas %fp@(16), font 0x401e0b58, x = %fp@(20)+19, y = %fp@(24)+2)."
 
 [data.key_scale_draw_pick]
-addr = 0x400d64c6
+addr = 0x400dbc8a
+mk1 = 0x400d64c6
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 23.5, listing diffs 0/17"
 status = "verified"
 evidence = "key_scale_draw at `moveal %fp@(20),%a0; movel %fp@(-12,%d0:l:4),%sp@-` (206e0014 2f360cf4): d0 is the KEY SCALE value from key_scale_get, and the second instruction pushes names[d0] from the 3-entry stack copy - which reads past the copy for any value above 2."
 
 [data.key_scale_draw_resume]
-addr = 0x400d64ce
+addr = 0x400dbc92
+mk1 = 0x400d64ce
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 23.8, listing diffs 0/17"
 status = "verified"
 evidence = "key_scale_draw after the name push: pea \"%s\" (0x4019c7d8). From here to the draw call d1 and a1 are not used; a0 must hold %fp@(20)."
 
 [fn.key_offset]
-addr = 0x40077a12
+addr = 0x40079efe
+mk1 = 0x40077a12
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "The only engine reader of KEY SCALE: (pattern, track) -> MAJ: 12 - key, MIN: 21 - key, else 0. Track base 0x4096ff4e + pattern * 94170 + track * 945."
 
 # ================================================================== note input
 [fn.handle_note_event]
-addr = 0x40060ef4
+addr = 0x40062d98
+mk1 = 0x40060ef4
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 34.0, listing diffs 0/17"
 status = "verified"
 sig = "int(ViewController *this, NoteEvent *ev)"
 evidence = "NOT the path trig keys take: in KEYBOARD mode they arrive as key events and reach track_play_note directly. 0001's first build hooked here and the first hardware test (2026-10-09) showed it never saw the trig keys. Builds three std::function lambdas capturing ev whose managers (0x4005feec, 0x4005ff48, 0x4005ffa4) return the typeinfos named _ZN14ViewController15handleNoteEventER9NoteEventEUl..._, and dispatches through 0x40060b52. Single caller 0x40095cba, which the main loop's message switch reaches at 0x40096abc with a NoteEvent built by 0x4005d69a."
 
 [data.handle_note_event_body]
-addr = 0x40060efc
+addr = 0x40062da0
+mk1 = 0x40060efc
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 33.0, listing diffs 0/17"
 status = "verified"
 evidence = "handle_note_event past `lea %sp@(-64),%sp; moveml %d2/%a2-%a3,%sp@`: moveal %sp@(72),%a2 (ev)."
 
@@ -162,47 +211,63 @@ status = "verified"
 evidence = "0x4005d73e get_note: movel +0x14; ctor stores its 4th argument there. NOT a MIDI note: the live-play handler 0x400b98b8 plays note + 30 + 12 * octave (lea %a3@(30,%d3:l) with d3 = 12 * 0x400aafb4(...), refused above 127), so the played pitch class is (note + 30) mod 12 whatever the octave."
 
 [fn.live_note_handler]
-addr = 0x400b9ca4
+addr = 0x400bd294
+mk1 = 0x400b9ca4
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 44.7, listing diffs 0/17"
 status = "verified"
 evidence = "NoteHandler::handle of the track view: get_note, then on note-on plays 0x400b942c(this, note, note + 30 + 12 * octave, velocity) for tracks 0..5; note-off path at 0x400b9980 uses KEY NOTE."
 
 [fn.set_step_note]
-addr = 0x400ac934
+addr = 0x400afa38
+mk1 = 0x400ac934
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 15.2, listing diffs 0/17"
 status = "verified"
 evidence = "(TrackPattern accessor, step, offset): clamps offset to -36..36 and writes it to storage + 686 + step * 20, then notifies. Callers are only the keyboard's hold-a-trig handlers (0x40042812, 0x40042a1a, 0x40042ade, 0x40043fca, 0x400442de); 0x4004298c passes (note - KEY NOTE + 12 * octave + 30) - 60 = final - 60 - KEY NOTE, so the offset is relative to the key: its pitch class above the root is offset mod 12."
 
 [data.set_step_note_body]
-addr = 0x400ac93c
+addr = 0x400afa40
+mk1 = 0x400ac93c
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 17.0, listing diffs 0/17"
 status = "verified"
 evidence = "set_step_note past `lea %sp@(-16),%sp; moveml %d2-%d4/%a2,%sp@`: moveal %sp@(20),%a2."
 
 [fn.track_play_note]
-addr = 0x400b9818
+addr = 0x400bce08
+mk1 = 0x400b9818
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 28.1, listing diffs 1/17"
 status = "verified"
 sig = "void(TrackView *this, int raw, int final, int velocity)"
 evidence = "THE choke point for played notes. Called by the trig-key KEYBOARD path (key events, 0x400ba1e4: final = key + 44 + 12 * octave) and by live_note_handler for NoteEvents (0x400b9976: final = note + 30 + 12 * octave). Refuses final > 127 (unsigned). Keeps 20-byte held-note entries {state, raw +4, final +8, vel +12, on +16}, and calls 0x400b7fa8(this, final, vel), which plays and live-records. Note-off 0x400b8342(this, raw) finds the entry by raw and releases its stored final, so changing final at note-on is safe."
 
 [data.track_play_note_body]
-addr = 0x400b981e
+addr = 0x400bce0e
+mk1 = 0x400b981e
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 30.1, listing diffs 0/17"
 status = "verified"
 evidence = "track_play_note past `linkw %fp,#-88; moveq #127,%d0` (4e56ffa8 707f): moveml %d2-%d7/%a2-%a5,%sp@."
 
 # ==================================================================== encoders
 [fn.param_apply_delta]
-addr = 0x40022fb4
+addr = 0x400232e2
+mk1 = 0x40022fb4
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 42.0, listing diffs 0/17"
 ar1 = 0x400376d4
 status = "verified"
 sig = "void(View *this, uint id, int delta, char funcHeld, char *outFlag)"
 evidence = "xmatch from the Rytm MK1: prologue and the 12 instructions after it identical (target via vtable[0xa8] here, [0xa0] there; dispatch to the target's vtable[0x34]). vtable slot +0x58 of ParameterPageView, SoundPageView and ParametersSeqNoteView (the TRIG page) among others."
 
 [data.param_apply_delta_resume]
-addr = 0x40022fbc
+addr = 0x400232ea
+mk1 = 0x40022fbc
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 42.0, listing diffs 0/17"
 ar1 = 0x400376dc
 status = "verified"
 evidence = "param_apply_delta past `lea %sp@(-12),%sp; moveml %d2-%d3/%a2,%sp@`: moveal %sp@(16),%a2. Values and the delta on this path are 8.8 on the 0..127 scale (rytm-mods' 0002/0003/0004 stubs)."
 
 [fn.page_get_value]
-addr = 0x400239e2
+addr = 0x40023d54
+mk1 = 0x400239e2
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 35.6, listing diffs 0/17"
 ar1 = 0x400381a0
 status = "verified"
 sig = "int(PageView *this, int paramId, int lock)"
@@ -214,28 +279,38 @@ status = "verified"
 evidence = "The page encoder handler 0x40025530 indexes parameter records at 0x4016952c + 56 * id. Record 19 (0x40169954) is \"Main Note\" / NOT / NOTE: container 6 index 0, 0..0x7f00, default 0x3000 (48); its +0x20 is 0x1e, which the first build mistook for the id (id 30 is the track's Level). Corrected after the second hardware test, 2026-10-09."
 
 [data.param_records]
-addr = 0x401699c8
+addr = 0x40186af4
+mk1 = 0x401699c8
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 24.0, listing diffs 1/17"
 status = "verified"
 evidence = "56-byte records by parameter id: +0 container, +4 index, +8 min, +0xc max, +0x10 default (8.8), +0x18 flags (& 0x3c000 tested by the encoder handler), +0x20 CC, +0x28 long name, +0x2c group, +0x30 short name, +0x34 page label. Clamped id <= 294."
 
 [fn.lock_delta_apply]
-addr = 0x40023518
+addr = 0x4002388a
+mk1 = 0x40023518
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 26.2, listing diffs 0/17"
 status = "verified"
 sig = "int(PageView *this, int step, int id, int delta)"
 evidence = "Vtable slot +0x78 (shared by ParameterPageView and ParametersSeqNoteView). Called per held trig by the lambda invoker 0x40023344, after it has made sure the step has a lock (vtable +0x70 read, +0x74 create from page_get_value). Resolves the target via +0xa8 and tail-calls its +0x60 with (step, id, delta)."
 
 [data.lock_delta_apply_body]
-addr = 0x40023520
+addr = 0x40023892
+mk1 = 0x40023520
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 25.2, listing diffs 0/17"
 status = "verified"
 evidence = "lock_delta_apply past `lea %sp@(-16),%sp; moveml %d2-%d4/%a2,%sp@`."
 
 [data.lock_add_site]
-addr = 0x40023c38
+addr = 0x40023faa
+mk1 = 0x40023c38
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 44.0, listing diffs 0/17"
 status = "verified"
 evidence = "In the held-trig encoder routine 0x40023a3c (vtable +0x7c), the direct-edit arm: `lea %sp@(12),%sp; addl %d5,%d0` - d0 the lock's current value (via +0x18 of the 0x40021d4a object), d5 the delta, d4 the parameter id (loaded at 0x40023a48, untouched until 0x40023b10). Then clamped to -32768..32767 and stored. d1/a0/a1 are not read before being reloaded."
 
 [data.lock_add_resume]
-addr = 0x40023c3e
+addr = 0x40023fb0
+mk1 = 0x40023c3e
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 44.5, listing diffs 0/17"
 status = "verified"
 evidence = "cmpil #-32768,%d0 after the add."
 
@@ -246,22 +321,30 @@ evidence = "PageView vtable slot read by the invoker 0x40023344 as (view, step, 
 
 # ================================================================== audio engine
 [fn.audio_isr]
-addr = 0x400fb56a
+addr = 0x401013be
+mk1 = 0x400fb56a
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 24.5, listing diffs 2/17"
 status = "verified"
 evidence = "Installed into the vector table at 0x400002fc by 0x400fe8c8 (movel #0x400fb0d6 -> 0x400002fc). lea %sp@(-236),%sp; moveml %d0-%fp,%sp@ - saves everything - then acks 0xfc04c010, reads the playback DMA position 0xfc045690 to pick one of four buffers, saves the EMAC state, runs the control block, the voice noise (0x400f9912), the FX block (0x400f849c), and returns at 0x400fda70 (rte)."
 
 [data.audio_isr_body]
-addr = 0x400fb572
+addr = 0x401013c6
+mk1 = 0x400fb572
+mk2 = "checked by hand against the MK1 listing: the MKII prologue is linkw %fp,#-236; moveml %d0-%a5,%sp@ (8 bytes)"
 status = "verified"
-evidence = "audio_isr past its 8-byte prologue: movel #0x7fffffff,%d0."
+evidence = "audio_isr past its 8-byte prologue: movel #0x7fffffff,%d0. (On the MKII the prologue is linkw %fp,#-236; moveml %d0-%a5,%sp@: the frame is addressed through %fp.)"
 
 [data.audio_isr_exit]
-addr = 0x400fdee0
+addr = 0x401040da
+mk1 = 0x400fdee0
+mk2 = "checked by hand against the MK1 listing: moveml %fp@(-32),%d0-%d6/%a0 (MK1: %sp@(204))"
 status = "verified"
-evidence = "moveml %sp@(204),%d0-%d6/%a0 (4cef017f00cc): the start of the EMAC-state restore; every register is restored from the frame after it, so all are free here."
+evidence = "The start of the EMAC-state restore: moveml %fp@(-32),%d0-%d6/%a0 (MK1: moveml %sp@(204),%d0-%d6/%a0). Every register except %fp is restored from the frame after it (moveml %fp@(-236),%d0-%a5; unlk %fp; rte), so on the MKII all are free here but %fp."
 
 [data.audio_isr_exit_resume]
-addr = 0x400fdee6
+addr = 0x401040e0
+mk1 = 0x400fdee6
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
 evidence = "movel #0,%macsr after the moveml."
 
@@ -271,39 +354,53 @@ status = "verified"
 evidence = "DMA timer 0 count. Set up at 0x400ff79c with DTMR0 = 0x000b (bus clock, free run, enabled); read by stock at 0x40052bc4, 0x40052cde, 0x40063f7a. Same register and use as rytm1 0008's diag."
 
 [fn.track_levels]
-addr = 0x400f45a8
+addr = 0x400fa2b0
+mk1 = 0x400f45a8
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 42.0, listing diffs 1/17"
 status = "verified"
 evidence = "Control block, called from audio_isr at 0x400fd544. Per track (d2 = 0..3) it turns the track's volume (%a2@, a2 = %sp@(60) + 4 * track) into (1) the send gain written to the ring 0x80006460 by 0x400f40ee and a pan pair to 0x800062e0 by 0x400f40ba - which the FX block 0x400f849c multiplies with the send levels - and (2) the analog dry VCA words volume x pan L/R, written to 0x800032b0 + 26 * track + 22/24 (0x400f44b0, 0x400f44d6). The CV frame at 0x800032b0 is sent out by 0x40061834 (0x400fd7f2)."
 
 [data.dry_volume_load]
-addr = 0x400f48ee
+addr = 0x400fa6c4
+mk1 = 0x400f48ee
+mk2 = "checked by hand against the MK1 listing: the MKII holds the volume pointer in a3 and the L gain in d7 (MK1 a2, d5)"
 status = "verified"
-evidence = "movel %a2@,%d0; macl %d0,%d5,%acc0 (2012 aa000800): the volume, loaded for the dry VCA words only - after the send gain has been written. d1 and a0 are dead here (d1 is reloaded at 0x400f4412, a0 clobbered by the call before); d2 is the track."
+evidence = "movel %a3@,%d0; macl %d0,%d7,%acc0 (2013 ae000800): the volume, loaded for the dry VCA words only - after the send gain has been written (0x400fa6a6..0x400fa6c0). d1 and a0 are dead here (d1 is reloaded at 0x400fa6fc, a0 is set from d4 at 0x400fa720 before use); d2 is the track (0..3, 0x400fa654 / 0x400fa74e). The words go to 0x80003d6c + 26 * track + 22/24 (d4)."
 
 [data.dry_volume_resume]
-addr = 0x400f48f4
+addr = 0x400fa6ca
+mk1 = 0x400f48f4
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
-evidence = "macl %d0,%d3,%acc1 - the R side; d0 must still hold the volume used."
+evidence = "macl %d0,%d6,%acc1 - the R side; d0 must still hold the volume used."
 
 [data.global_quantize_value_call]
-addr = 0x400d6316
+addr = 0x400dbada
+mk1 = 0x400d6316
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 26.0, listing diffs 0/17"
 status = "verified"
 evidence = "NOTE SETUP GLOBAL QUANTIZE value draw: jsr 0x4009eb1a (the getter), result drawn with \"%d\". The operand at +2 can be repointed to a function taking the same accessor."
 
 [data.trk_quantize_value_call]
-addr = 0x400d63e4
+addr = 0x400dbba8
+mk1 = 0x400d63e4
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 15.5, listing diffs 0/17"
 status = "verified"
 evidence = "NOTE SETUP TRK QUANTIZE value draw: jsr 0x400b23ac, result drawn with \"%d\". The setter thunk 0x400d5fa6 has its own call (0x400d5fc0), so repointing this one changes the display only."
 
 # ===================================================================== the kit
 [fn.active_kit]
-addr = 0x400a222e
+addr = 0x400a51f6
+mk1 = 0x400a222e
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 21.7, listing diffs 1/17"
 status = "mapped"
 sig = "Kit *(Project *)"
 evidence = "Called on project_singleton's result right before kit_fx_setup at 0x400dde56 (and the same pairing at 0x400df90e.., 0x400dfac2..)."
 
 [fn.kit_fx_setup]
-addr = 0x400998e2
+addr = 0x4009c6de
+mk1 = 0x400998e2
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 36.2, listing diffs 0/17"
 status = "verified"
 evidence = "return kit + 0x1030. The kit object (constructors 0x4009a2xx/0x4009a4xx) holds four 988-byte sounds at +60, the FxSetup at +0x1030 (ctor 0x4009827c, vtable 0x40182828) and the FxParameterSet at +0x140c."
 
@@ -318,205 +415,283 @@ status = "verified"
 evidence = "Every FxSetup setter (e.g. 0x40097f34) ends by calling vtable +0x10 with (this, &info), info = {0x4016f56c, -1, 1 (byte), 1 (byte)} built on the stack."
 
 [data.fx_change_info_vt]
-addr = 0x4016fa08
+addr = 0x4018cb34
+mk1 = 0x4016fa08
+mk2 = "mapped from the MK1 1.56 image: data refs 12/12"
 status = "verified"
 evidence = "The first long of the change-info record every FxSetup setter passes to its notify."
 
 [data.trk_quantize_get_call]
-addr = 0x400d643c
+addr = 0x400dbc00
+mk1 = 0x400d643c
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 17.3, listing diffs 0/17"
 status = "verified"
 evidence = "TRK QUANTIZE encoder thunk 0x400d5fa6: jsr 0x400b23ac (get), then value + delta goes to the setter by jmp 0x400b23dc at 0x400d5fd6 with (accessor, value)."
 
 [data.trk_quantize_set_jmp]
-addr = 0x400d6452
+addr = 0x400dbc16
+mk1 = 0x400d6452
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 18.1, listing diffs 0/17"
 status = "verified"
 evidence = "jmp 0x400b23dc, the TRK QUANTIZE setter, at the end of the encoder thunk."
 
 [data.project_ptr]
-addr = 0x415cba28
+addr = 0x418717c8
+mk1 = 0x415cba28
+mk2 = "mapped from the MK1 1.56 image: data refs 31/31"
 status = "verified"
 evidence = "The project singleton's storage: project_singleton (0x4012e3fa) tests it and constructs on 0, else returns it. Nonzero for good after boot."
 
 [const.PROJECT_KIT_FX_STORAGE]
-value = 4404
+value = 4524
+mk1 = 4404
+mk2 = "364 + 0x1030 + 16: the MKII's active_kit (0x400a51f6) is project + 364 (the MK1's + 244; the MKII project is 120 bytes longer, 0x3df14), kit_fx_setup (0x4009c6de) is still kit + 0x1030, and the FxSetup vtable (0x401a0b70) +0x28 = 0x4016685c still returns this->+16."
 status = "verified"
 evidence = "244 + 0x1030 + 16: active_kit = project + 244 (0x400a1e6a: addil #244), kit_fx_setup = kit + 0x1030, and the FxSetup's storage pointer is its +16 (vtable +0x28 = 0x4014b34a). All plain arithmetic and loads, so the audio interrupt can follow it."
 
 [fn.chorus]
-addr = 0x400f83e4
+addr = 0x400fe1f0
+mk1 = 0x400f83e4
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 42.0, listing diffs 0/17"
 status = "verified"
 sig = "void(int32 *in, int32 *out)"
 evidence = "Called from the FX block at 0x400f86b8 with in = 0x800070a0 (the chorus send bus: 32 stereo frames, L/R interleaved 32-bit) and out = 0x80006ca0 + 8 * pos (pos = 0x415c00ac, a multiple of 32 in a 128-frame ring), which the output mix at 0x400f8800 reads back. lea %sp@(-208),%sp; moveml %d2-%d7/%a2-%fp,%sp@. Parameters from the SRAM FX array: PRE 0x80005174 (word), SPD 0x80005176 (byte), DEP 0x80005178 (word), WID 0x8000517a (byte), FDB 0x8000517c (word), HPF 0x8000517e, LPF 0x80005180 (bytes). Its delay RAM: 6 x 2 KB at 0x46800000 (cleared, 768 x 16 B, at 0x400f7d92); the reverb's begins at 0x46810000, and nothing refers to 0x46803000..0x4680ffff."
 
 [data.chorus_body]
-addr = 0x400f83ec
+addr = 0x400fe1f8
+mk1 = 0x400f83ec
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 42.0, listing diffs 0/17"
 status = "verified"
 evidence = "chorus past its 8-byte prologue: movel 0x800085bc,%d0."
 
 [fn.fx_copy]
-addr = 0x40009028
+addr = 0x40009300
+mk1 = 0x40009028
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 42.8, listing diffs 0/17"
 status = "verified"
 sig = "bool(FxStorage *dst, FxStorage *src)"
 evidence = "The FX block copier with no version check, word by word: offsets 4..10 and 56..108, then sub-blocks (+156, +178 via 0x400084c6/0x4000831a) and the bytes at 258/259. It SKIPS offsets 12..55, which is why words 10..25 did not survive a save and reload (hardware, 2026-10-10). Callers: the kit-to-kit copy 0x400093ce, FxSetup's own copy 0x40097da8, and the export of the active kit's FX to a buffer 0x400f184e."
 
 [data.fx_copy_body]
-addr = 0x40009030
+addr = 0x40009308
+mk1 = 0x40009030
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 41.8, listing diffs 0/17"
 status = "verified"
 evidence = "fx_copy past `lea %sp@(-32),%sp; moveml %d2-%d4/%a2-%fp,%sp@`."
 
 [fn.trig_fire]
-addr = 0x40077ce6
+addr = 0x4007a1d2
+mk1 = 0x40077ce6
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 sig = "void(int track, int pattern, int step, int ...)"
 evidence = "lea %sp@(-128); a5 = track (sp@132), d5 = pattern (sp@136), d2 = step (sp@140, remapped through the track's step order at +745/+746), a2 = 0x4096ff4e + pattern * 94170, a3 = track * 945. Reads the step flags word a2 + a3 + 2 * step into d3 (0x40077bae; trig = & 3, bit 4 note slide, bit 5 parameter slide) and per-step bytes with track defaults: NOTE +128/+0x1c0, VEL +192/+0x1c1, LEN +256/+0x1c2 (into %sp@(84)), micro timing +320, trig condition +384, chord notes +532/+596/+660. Track length: byte a2 + 93900 set -> word a2 + a3 + 453, else word a2 + 93894. Builds the trig event at a4 (+12 note, +36 flags = d3, +48 = LEN ticks from 0x401f16a4[LEN + 1], +52 key_offset)."
 
 [data.slide_site]
-addr = 0x40077fa0
+addr = 0x4007a48c
+mk1 = 0x40077fa0
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "trig_fire right after LEN is stored to %sp@(84) (0x40077ca6): `lea %a2@(0,%a3:l),%a0; tstb %a0@(458)` (41f2b800 4a2801ca), d2/d3/a2/a3/a5 as above. The beqs after it reads the tst's flags."
 
 [data.slide_resume]
-addr = 0x40077fa8
+addr = 0x4007a494
+mk1 = 0x40077fa8
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "beqs 0x40077cb8 after the TRANSPOSABLE test."
 
 [fn.ppv_ctor]
-addr = 0x40024f16
+addr = 0x4002522c
+mk1 = 0x40024f16
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 35.4, listing diffs 0/17"
 status = "verified"
 sig = "void(ParameterPageView *this, int page, int tag)"
 evidence = "Called by the startup view builder for pages 6..9, 14..16, 21.., e.g. 0x400be3fa (view, 6, 0x33). Sets vtable 0x40170080, page at +128 (page_info(page) via 0x400f01a0), title std::string at +124 from the page name."
 
 [fn.view_wrap]
-addr = 0x40155eec
+addr = 0x40171460
+mk1 = 0x40155eec
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 8.1, listing diffs 0/17"
 status = "verified"
 sig = "void(shared_ptr<View> *out, View *view)"
 evidence = "Allocates the 16-byte control block (vtable 0x40188410) and stores {view, block} in *out; the builder calls it after each view's ctor, before filing the temp in the view map."
 
 [data.sound_conv_body]
-addr = 0x40008538
+addr = 0x40008810
+mk1 = 0x40008538
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 41.1, listing diffs 0/17"
 status = "verified"
 evidence = "0x40008530 (dst, src): a 350-byte v6 sound record (magic 0xbeefbaba, version 6 at +4, 0xbabeface at +346; bank kits, pool) into the 338-byte storage format the live kit uses (no header; parameter k at +20 + 2k), field by field: it skips parameter words 102..103 (350 +232..235) and the pad +241..243. Callers: the kit load 0x40008cde (live 338 kit +28 <- 350 kit +32, beside fx_copy_v4), 0x400088d6, 0x4001109e, and a jmp at 0x40012454. The reverse, 0x40008ee4, block-copies 338 +20..227 into 350 +28..235. Body after `lea %sp@(-28),%sp; moveml %d2-%d3/%a2-%fp,%sp@` (4fef ffe4 48d7 7c0c). The live sound for track t is at kit FX storage S - 1352 + 338 t: turning OSC1 TUN in the emulator changed only S - 1332 (parameter 0), 2026-10-14."
 
 [data.fade_level_resume]
-addr = 0x400fa09a
+addr = 0x400ffe0a
+mk1 = 0x400fa09a
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 42.0, listing diffs 1/17"
 status = "verified"
 evidence = "The noise generator, after its fade envelopes are updated (0x400f9bc2..: env 0x80001be8 + 4v = clamp(env + 0x4007a18c(FAD word 0x80005358 + 2v), 0..0x3fffffff)) and before the levels are taken from them: after `lea 0x80001be8,%a0` (41f9 8000 1be8, 0x400f9c00), which the next instruction (moveml %a0@(13560),%d0-%d1: the LEV words at 0x800050e0) and the macw chain use; level = (env x LEV)^2. The engine writes the FAD word only when it changes (emulator: 3 writes in a second, from 0x400fa7b2), so it must not be overwritten."
 
 [data.cho_index_resume]
-addr = 0x400f8406
+addr = 0x400fe212
+mk1 = 0x400f8406
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 46.0, listing diffs 0/17"
 status = "verified"
 evidence = "The chorus (0x400f7f50) after `mvsb 0x8000517e,%d0` (7139 8000 517e, 0x400f7f6c): HPF's modulated value (CHORUS knob 6, container 7 index 31; its high byte), a signed index x 4 into the coefficient table 0x401ee978 (lea at 0x400f7f72). The other tables (0x401ee378/178, 0x401edf78) use 0x80005180's byte. Emulator 2026-10-15: with LFO1 at full depth and speed on HPF (square), the byte stays within 0..127 from HPF 0 and from HPF 127 (the engine clamps)."
 
 [data.pinfo_resume]
-addr = 0x400f0638
+addr = 0x400f6218
+mk1 = 0x400f0638
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 31.0, listing diffs 0/17"
 status = "verified"
 evidence = "page_info(page) 0x400f01a0 after `moveq #47,%d1; movel %sp@(4),%d0` (722f 202f 0004): pages above 47 get the default descriptor 0x40193ff0, others 0x40194a14 + 44 page."
 
 [fn.ext_vca_next]
-addr = 0x400f6808
+addr = 0x400fc614
+mk1 = 0x400f6808
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 47.1, listing diffs 0/17"
 status = "verified"
 evidence = "Called (no register arguments: it loads its own) by the audio interrupt's control block at 0x400fd7e6, right after the input mixer's four VCA words 0x80003318..0x8000331e are written (0x400fd75e..0x400fd7e0)."
 
 [data.ext_vca_resume]
-addr = 0x400fdc80
+addr = 0x40103dac
+mk1 = 0x400fdc80
+mk2 = "checked by hand against the MK1 listing: after jsr ext_vca_next (0x40103da6)"
 status = "verified"
-evidence = "The control block after `jsr 0x400f6374` (4eb9 400f 6374, 0x400fd7e6): pea 0x800032b0; jsr 0x40061834 (sends the voice frame), then the noise generator."
+evidence = "The control block after `jsr 0x400fc614` (ext_vca_next, at 0x40103da6): pea 0x80003d6c; jsr 0x400639a4 (sends the voice frame), then the noise generator."
 
 [data.noise_mix_resume]
-addr = 0x400fa0e6
+addr = 0x400ffe56
+mk1 = 0x400fa0e6
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 47.0, listing diffs 0/17"
 status = "verified"
 evidence = "The noise generator 0x400f9912's final mix, after its first instruction `lea 0x800050e8,%a1` (43f9 8000 50e8): per voice v, output 0x8000285c + 128v = the sum of the three sources 0x80001fa8 / 0x800021d8 / 0x80001d78 (+ 140v, samples after a 12-byte history) times gains ramped over the block to (level from 0x80005358 via 0x4007a18c) x (COL's three crossfade weights from 0x800050e8 + 2v, summing to 1). Nothing is live in registers at the lea."
 
 [data.page_build_resume]
-addr = 0x400bee52
+addr = 0x400c2378
+mk1 = 0x400bee52
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
 evidence = "The view builder after slot 28: lea 0x40132b58,%a3 after the displaced `lea %sp@(12),%sp; moveal %fp@(8),%a0` (0x400be9ce)."
 
 [data.knob_draw_resume]
-addr = 0x40023196
+addr = 0x400234cc
+mk1 = 0x40023196
+mk2 = "checked by hand against the MK1 listing: knob draw entry: the MKII builds the frame with lea/movem (8 bytes), no link; resume past both"
 status = "verified"
 evidence = "The knob draw 0x400230da (vtable +0xa0 of ParameterPageView 0x40170080 and seven subclass vtables) past `linkw %fp,#-68; moveb %fp@(43),%d0`."
 
 [data.short_name_resume]
-addr = 0x4009b7c8
+addr = 0x4009e7a8
+mk1 = 0x4009b7c8
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 28.0, listing diffs 1/17"
 status = "verified"
 evidence = "The parameter sets' short-name getter 0x4009b476 (vtable +0x74 of six of the seven set vtables 0x40183264..; the seventh has 0x4009c032) past `movel %sp@(8),%d0; cmpil #295,%d0`: returns record[id] + 0x30. The knob draw prints it under the dial (0x40023244 -> 0x400231fc). The dial draw (+0x90, 0x4009b7be) draws only the dial and value."
 
 [data.page_info_resume]
-addr = 0x400f0638
+addr = 0x400f6218
+mk1 = 0x400f0638
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 31.0, listing diffs 0/17"
 status = "verified"
 evidence = "page_info 0x400f01a0 past `moveq #47,%d1; movel %sp@(4),%d0`: cmpl %d0,%d1; pages above 47 get the default descriptor 0x40193ff0, else 0x40194a14 + 44 * page."
 
 [data.held_resume]
-addr = 0x40025a0c
+addr = 0x40025cda
+mk1 = 0x40025a0c
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
 evidence = "The encoder handler after its held-trig call `moveal %a0@(124),%a0; jsr %a0@` (0x400258ac): lea %sp@(12),%sp; bra to the value popup."
 
 [fn.engine_set_param]
-addr = 0x400fa764
+addr = 0x401005b8
+mk1 = 0x400fa764
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 36.0, listing diffs 0/17"
 status = "verified"
 sig = "void(int value, int track, int index, bool dest)"
 evidence = "Called for every sound parameter on edit and on sound/kit load (0x400a3d5c, 0x400a3ea0 loop, 0x4009da90...), value = the 8.8 storage word, index = container-1 index (0x400074fa(1, id)), dest = record +24 & 0x3c000 (a modulation destination selector). Track 0..3: for each voice v whose 0x80005530[v] == track, slot = SLOT_MAP[v][index] (0x425d23e4 + 512 v + 2 index) and 0x80003378[slot] = value (dest: the slot of the selected destination instead), 0x80002d20[slot] = 0."
 
 [data.engine_set_param_body]
-addr = 0x400fa76c
+addr = 0x401005c0
+mk1 = 0x400fa76c
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 38.0, listing diffs 0/17"
 status = "verified"
 evidence = "engine_set_param past `lea %sp@(-32),%sp; moveml %d2-%d6/%a2-%a4,%sp@` (4fef ffe0 48d7 1c7c)."
 
 [data.lock_site]
-addr = 0x400783de
+addr = 0x4007a8ca
+mk1 = 0x400783de
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "trig_fire right after `jsr 0x400777dc(track, L, locks, aux)` (args still on the stack, popped at 0x400780f6): `movel #1500,%d0` (203c 0000 05dc). 0x400777dc fills the lock list L: entries at L+16 + 8n = {index.w, slot.w (SLOT_MAP[track][index]), value.w, aux.w (aux[index], aux = arg 4 or 0x425cca7c)}; L+4 = entries with slot < 588 (0x400fa02c), L+8 = the rest, L+12.w = aux-only entries after them. d3 = the trig flags (bit 3 accent, from the step flags word; 0x400b41da sets mask 8 for the accent menu)."
 
 [data.lock_resume]
-addr = 0x400783e4
+addr = 0x4007a8d0
+mk1 = 0x400783e4
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "mulsl %d4,%d0 after the displaced move."
 
 [data.look_site]
-addr = 0x40078306
+addr = 0x4007a7f2
+mk1 = 0x40078306
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "trig_fire's note-slide look-ahead (from 0x40077fc4, only for note trigs): d0 = the next trig's step (skipping condition-failed steps). `lea %a3@(0,%d0:l:2),%a0; moveq #16,%d6` (41f3 0a00 7c10), then movea.w the next trig's flags into a1, and d6 & 16 = 0 -> 0x40078092 (d0 = -1). Else it checks this note's LEN ticks (table[sp@(84) + 1]) cover the distance and keeps d0. 0x40078094: if 0x80006090[track] == this step and d3 has bit 4, d3 &= ~0x1c0 (no envelope retrigger); then 0x80006090[track] = d0, the next legato target."
 
 [data.look_resume]
-addr = 0x4007830c
+addr = 0x4007a7f8
+mk1 = 0x4007830c
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "movea.w %a0@(0,%a2:l),%a1 after the displaced pair."
 
 [data.look_slide]
-addr = 0x40078318
+addr = 0x4007a804
+mk1 = 0x40078318
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "The look-ahead's path when the next trig slides: lea %a2@(0,%a3:l),%a0, then the distance vs LEN check. Expects a1 = the next trig's flags (bit 11 read at 0x40078046)."
 
 [data.look_none]
-addr = 0x40078388
+addr = 0x4007a874
+mk1 = 0x40078388
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "moveq #-1,%d0: no legato target."
 
 [fn.fx_copy_v4]
-addr = 0x4000891a
+addr = 0x40008bf2
+mk1 = 0x4000891a
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 44.5, listing diffs 0/17"
 status = "verified"
 sig = "bool(FxStorage *dst, FxStorage *src)"
 evidence = "Same field-by-field layout as fx_copy (skips 24..55), behind `cmp.l #4,(src)`; copies bytes 258/259 and the version long. Called by the kit converter at 0x40008d3e as (storage kit + 1380, working kit + 1432), with 0x400155c4 (FX defaults) as its fallback: the save direction. The reverse (0x400093ce) uses fx_copy."
 
 [data.fx_copy_v4_body]
-addr = 0x40008922
+addr = 0x40008bfa
+mk1 = 0x40008922
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 43.5, listing diffs 0/17"
 status = "verified"
 evidence = "fx_copy_v4 past `lea %sp@(-32),%sp; moveml %d2-%d4/%a2-%fp,%sp@`."
 
 [fn.fx_copy_v2]
-addr = 0x4000c91a
+addr = 0x4000cbf2
+mk1 = 0x4000c91a
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 35.4, listing diffs 0/17"
 status = "verified"
 sig = "bool(FxStorage *dst, FxStorage *src)"
 evidence = "Same layout and word list as fx_copy (offsets 4..10, 56..108; skips 12..55), after 0x4000a8e0(dst, src) and a check that src->+0 == 2. Called from the kit loaders 0x4000d1b2 and 0x400125ce. Hooked after hardware showed fx_copy alone does not make the spare words survive a power cycle (2026-10-10)."
 
 [data.fx_copy_v2_body]
-addr = 0x4000c922
+addr = 0x4000cbfa
+mk1 = 0x4000c922
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 37.3, listing diffs 0/17"
 status = "verified"
 evidence = "fx_copy_v2 past `lea %sp@(-36),%sp; moveml %d2-%d5/%a2-%fp,%sp@`."
 
 [fn.is_key_held]
-addr = 0x40062872
+addr = 0x400647a2
+mk1 = 0x40062872
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 41.8, listing diffs 0/17"
 ar1 = 0x4008022e
 status = "verified"
 evidence = "xmatch from the Rytm MK1, vote 32.7, body identical (key id -> table 0x408c25d8 -> bit). The page encoder handler calls is_key_held(0x80) (0x4002572c) for its FUNC flag."
@@ -527,70 +702,96 @@ status = "verified"
 evidence = "The id the encoder handler (0x4002572c) and the TRIG page override (0x400c2596) test; FUNC on the Rytm too."
 
 [fn.string_from_cstr]
-addr = 0x40167486
+addr = 0x4018471e
+mk1 = 0x40167486
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 29.5, listing diffs 0/17"
 status = "verified"
 sig = "void(std::string *dst, const char *src, void *alloc)"
 evidence = "Builds a string in place: ParameterPageView's ctor makes its title with (this + 124, page name, &stack byte). 479 call sites."
 
 [fn.param_label]
-addr = 0x4009bac4
+addr = 0x4009ea68
+mk1 = 0x4009bac4
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
 sig = "void(ParameterSet *set, int id, int x, std::string *out)"
 evidence = "Vtable +0x84 of every ParameterSet (Sound and Fx share it): param_info(id), then the label formatter std::function at +24 of the 88-byte record, writing into out. The page draw calls it per knob (0x40023194)."
 
 [data.param_label_body]
-addr = 0x4009bacc
+addr = 0x4009ea70
+mk1 = 0x4009bacc
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
 evidence = "param_label past `movel %d3,%sp@-; movel %d2,%sp@-; movel %sp@(20),%d2`."
 
 [data.page_get_value_body]
-addr = 0x400239ea
+addr = 0x40023d5c
+mk1 = 0x400239ea
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 37.5, listing diffs 0/17"
 status = "verified"
 evidence = "page_get_value past `lea %sp@(-12),%sp; moveml %d2-%d3/%a2,%sp@`."
 
 [data.encoder_apply_call]
-addr = 0x40025a56
+addr = 0x40025d20
+mk1 = 0x40025a56
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
 evidence = "The page encoder handler's call of view vtable +0x58 (param_apply_delta) with (view, id, delta, FUNC byte, &flag) pushed: `moveal %a0@(88),%a0; jsr %a0@`. Taken only with no trig held (the held path is +0x7c). After it, 0x4002589e pops the 20 bytes and goes on to the value popup (0x400257d0); the handler's exit is 0x400258ba (moveb %d7,%d0; moveml %fp@(-84); unlk; rts)."
 
 [data.encoder_apply_resume]
-addr = 0x40025a5c
+addr = 0x40025d26
+mk1 = 0x40025a5c
+mk2 = "checked by hand against the MK1 listing"
 status = "verified"
 evidence = "lea %sp@(20),%sp after the call."
 
 [data.encoder_exit]
-addr = 0x40025a68
+addr = 0x40025d32
+mk1 = 0x40025a68
+mk2 = "checked by hand against the MK1 listing: the exit returns d7 here, fp@(-29) on the MK1"
 status = "verified"
 evidence = "The encoder handler's exit; restores from %fp, so it can be reached with any %sp once the call's 20 bytes are popped."
 
 [fn.fx_block]
-addr = 0x400f8930
+addr = 0x400fe73c
+mk1 = 0x400f8930
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 sig = "void(int32 *frames, ...)"
 evidence = "The FX block (audio_isr 0x400fd818). frames = 32 codec frames of 8 slots (32 B each): the send mix (0x400f85f4) reads slots 0..3 (the four voices) and 6..7 (the input); then chorus, delay, reverb; the summed returns are written back over the start of frames as 32 stereo pairs (a4 at 0x400f87be). lea %sp@(-140),%sp; moveml %d2-%d7/%a2-%fp,%sp@."
 
 [data.fx_block_body]
-addr = 0x400f8938
+addr = 0x400fe744
+mk1 = 0x400f8938
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 48.0, listing diffs 0/17"
 status = "verified"
 evidence = "fx_block past its prologue: movel #160,%macsr."
 
 [data.fx_block_tail]
-addr = 0x400f8cc0
+addr = 0x400feace
+mk1 = 0x400f8cc0
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 31.0, listing diffs 0/17"
 status = "verified"
 evidence = "`movel %d0,0x415c0004` right after the output loop; a4 points just past the 32 output pairs. After it stock stores a0 and d1 (0x400f8842/48), so those must be preserved."
 
 [data.fx_block_tail_resume]
-addr = 0x400f8cc6
+addr = 0x400fead4
+mk1 = 0x400f8cc6
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 30.0, listing diffs 0/17"
 status = "verified"
 evidence = "moveq #127,%d5 after the store."
 
 # ================================================================== persistence
 [data.key_scale_load_clamp]
-addr = 0x40009730
+addr = 0x40009a08
+mk1 = 0x40009730
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 39.2, listing diffs 0/17"
 status = "verified"
 evidence = "Pattern load sanitising the NOTE SETUP bytes: `moveq #2,%d2` then KEY SCALE (+0x1c9) values > 2 or < 0 become 0."
 
 [data.key_scale_set_clamp]
-addr = 0x400b29d4
+addr = 0x400b5ad8
+mk1 = 0x400b29d4
+mk2 = "mapped from the MK1 1.56 image: xmatch vote 14.4, listing diffs 0/17"
 status = "verified"
 evidence = "key_scale_set: `moveq #2,%d0; cmpl %d2,%d0; bges; moveq #2,%d2` clamps the menu's value to 0..2."
