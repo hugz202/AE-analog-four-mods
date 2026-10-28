@@ -7,7 +7,7 @@ title   = "Digital wave / chord oscillator: the noise generator plays a sine/tri
 enabled = false
 
 # re-only | built | hardware-verified | retracted
-status  = "built"
+status  = "hardware-verified"
 
 summary = """
 The NOISE page's 4th knob (OFF / WAV / CHD) turns the track's noise generator into a
@@ -18,16 +18,19 @@ VCA shape it as they shape the noise. With WAV on, the NOISE page reads:
 
   SHP   (S&H) the wave: 0 sine, 42 triangle, 85 saw, 127 square, morphing between
   FLD   (COL) wavefolder, 0 = clean, up to about 7x into the fold
+        CHD: COL picks the chord instead (13 zones), named on its label, so the
+        chord p-locks, follows LFOs and scenes
   FM    (FAD) FM depth: a sine at OSC2's pitch modulates the wave's phase;
         0 = none, 127 = about two cycles. The wave is never faded.
   WAV   the mode: OFF / WAV / CHD
-  (6th) the chord, named on its label
+  (6th) CHD's FLD (the folder in CHD; "---" otherwise), saved in the sound
   LEV   the wave's level (as the noise level: 0 = silent)
 
-SHP, FLD, FM and LEV are the stock noise parameters, so p-locks, LFOs and sound
+SHP, COL, FM and LEV are the stock noise parameters, so p-locks, LFOs and sound
 storage work on them as usual; WAV off gives the noise back with the same knobs.
-WAV itself is saved in the sound (its unused parameter word 103), so it follows
-the sound through kits, the sound pool and copies; it cannot be p-locked. The sine
+WAV is saved in the sound (its unused parameter word 103 = 0x57xx) and CHD's FLD
+in word 102 (0x46xx; the sound converter skips both, conv_gate carries them), so
+they follow the sound through kits, the sound pool and copies; neither p-locks. The sine
 is a polynomial (harmonics at -83 dB); saw and square are not band-limited and
 alias on high notes.
 """

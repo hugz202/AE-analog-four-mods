@@ -1,0 +1,44 @@
+[mod]
+id      = "0011-rand-track"
+title   = "Random track: TRACK + YES fills the track with a random line, TRACK + LEFT undoes it"
+
+# Not in the default build: `make hard` / `make full` build it with the others (it
+# stands alone too). OS 1.56.
+enabled = false
+
+# re-only | built | hardware-verified | retracted
+status  = "built"
+
+summary = """
+Hold a track key and press YES: the track is copied (for the undo), cleared (stock
+CLEAR TRACK) and filled over its length with a random line - trigs on about 62 % of
+the steps (the first always), notes in KEY NOTE + KEY SCALE (pentatonic minor when
+KEY SCALE is OFF) around the track's default note, about a quarter of them accented
+and a sixth slid. Press it again for another. Hold the track key and press LEFT:
+the copy goes back - the track as it was before the last random line, p-locks
+included (restored the way stock's UNDO CLEAR restores its own copy). The FX track is left alone. No settings.
+"""
+
+[sources]
+stub = "stub.s"
+
+[requires]
+symbols = [
+  "key_code",
+  "key_is_press",
+  "held_tracks",
+  "key_resume",
+  "key_handled",
+  "track_index_of",
+  "current_track_pattern",
+  "track_clear",
+  "memcpy",
+  "step_lock_prep",
+  "trig_flag_set",
+  "scale_table",
+  "str_from_cstr2",
+  "str_convert",
+  "show_popup",
+  "str_dtor",
+  "block_counter",
+]

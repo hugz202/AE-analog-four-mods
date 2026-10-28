@@ -15,7 +15,7 @@
         |     whose level is 0 in this block and the last is skipped.
         |
         | The mode is stored in the sound: its unused parameter word 103 =
-        | 0x57xx, xx = chord type << 2 | mode (0 off, 1 WAV, 2 CHD); any other
+        | 0x57xx, xx = mode (0 off, 1 WAV, 2 CHD; bit 7 0012's); any other
         | value is off (sounds converted from older OSes can carry leftovers
         | there). The track's live sound is in the 338-byte storage format at
         | S - 1352 + 338 t (S = the kit FX pointer 0006/0007 use), the word at
@@ -23,6 +23,11 @@
         | sound or kit copies 338 -> 350 with a block copy that carries it; the
         | reverse (0x40008530) copies field by field, so conv_gate carries it
         | there. The NOISE page's WAV and CHD knobs set it (0007's knob gates).
+        | CHD (2026-10-26): the chord is the COL knob's live value (13 zones over
+        | 0..127, so it p-locks and follows LFOs), the fold the sound's word 102
+        | = 0x46xx (unused by the OS: the engine's index table sends words 101
+        | and up to one dump slot, and no page writes it; emulator watch,
+        | 2026-10-26), carried with word 103.
         |
         |   pitch  OSC1's NCO word for the voice (0x80005f6c + 8v, written by
         |          the FX block: note, tune, bend, slide, vibrato, LFOs, all in),
@@ -30,8 +35,8 @@
         |          31 (the oscillator retrig) restarts our cycles too.
         |   SHP    the S&H knob (its modulated 8.8 word, 0x80005360 + 2v):
         |          0 sine, 42 triangle, 85 saw, 127 square, crossfaded between
-        |   FLD    the COL knob (0x800050e8 + 2v): a triangle wavefolder, gain
-        |          1 (COL 0, clean) to about 7 (COL 127)
+        |   FLD    the COL knob (0x800050e8 + 2v), in CHD word 102 (VFOLD): a
+        |          triangle wavefolder, gain 1 (0, clean) to about 7 (127)
         |   FM     the FAD knob (0x80005358 + 2v): phase modulation by a sine at
         |          OSC2's pitch (0x80005f70 + 8v), depth^2 scaled, up to about
         |          two cycles (index ~12.6) at 127; 0 = none
@@ -57,6 +62,7 @@
         .equ    SND0_FROM_S,  1352                | S - 1352 + 338 t
         .equ    SND_WAV,      226                 | parameter word 103
         .equ    WAV_SIG,      0x57                | its high byte when set
+        .equ    FOLD_SIG,     0x46                | word 102's (CHD's FLD), 0x46xx
         .equ    BANK_WAV,     SND_WAV + 8         | in the 350-byte records
         .equ    NCHORDS,      13
         .equ    SW_FIRST,     11                  | the first supersaw type
@@ -85,6 +91,7 @@
         .equ    SILENT,       0x46803029          | byte: bit v = v's level was 0
                                                   | last block
         .equ    VMODE,        0x4680302c          | 4 bytes: the voices' mode bytes
+        .equ    VFOLD,        0x46803030          | 4 bytes: CHD voices' FLD (word 102)
         .equ    NPH,          0x46803080          | 4 x 4 longs: the notes' phases
                                                   | voice()'s frame (a6, on the
         .equ    P_GAIN,       0                   | stack): fold gain, 0 = none
@@ -141,7 +148,7 @@ wave_gate:
         | ------------------------------------------------------------------
         | The sound converter 0x40008530 (dst, src): a 350-byte record (bank,
         | pool) into the 338-byte storage format (the live kit), field by
-        | field, which skips word 103. At its entry: carry it across.
+        | field, which skips words 102..103. At its entry: carry them across.
         | ------------------------------------------------------------------
         .align  2
 conv_gate:
@@ -153,7 +160,9 @@ conv_gate:
         moveq   #6,%d0                            | v6 records only: in older
         cmp.l   4(%a1),%d0                        | ones (5) these bytes are
         bne.s   1f                                | something else, and stock
-        move.w  BANK_WAV(%a1),SND_WAV(%a0)        | rejects them here anyway
+        move.l  BANK_WAV-2(%a1),SND_WAV-2(%a0)    | rejects them here anyway
+                                                  | (words 102 and 103: CHD's FLD
+                                                  | and the mode)
 1:      lea     -28(%sp),%sp                      | displaced
         movem.l %d2-%d3/%a2-%a6,(%sp)             | displaced
         jmp     sound_conv_body
@@ -169,54 +178,6 @@ conv_gate:
         | sound has WAV or CHD on (WMASK, their mode bytes in VMODE) and set
         | their envelopes to full.
         | ------------------------------------------------------------------
-        .align  2
-fad_gate:
-        lea     -12(%sp),%sp
-        movem.l %d2-%d3/%a2,(%sp)
-        moveq   #0,%d3                            | the mask
-        move.l  project_ptr,%d0
-        beq.s   9f
-        move.l  %d0,%a0
-        move.l  PROJECT_KIT_FX_STORAGE(%a0),%d0
-        beq.s   9f
-        move.l  %d0,%a2
-        lea     SND_WAV-SND0_FROM_S(%a2),%a2      | a2 = track 0's live WAV word
-        moveq   #0,%d2                            | voice
-1:      lea     VOICE_TRACK,%a0
-        move.l  %d2,%d0
-        lsl.l   #2,%d0
-        move.l  (%a0,%d0.l),%d1
-        moveq   #3,%d0
-        cmp.l   %d0,%d1
-        bhi.s   2f                                | not on a synth track
-        mulu.w  #SND_SIZE,%d1
-        mvz.w   (%a2,%d1.l),%d1                   | its sound's word 103
-        move.l  %d1,%d0
-        lsr.l   #8,%d0
-        cmpi.l  #WAV_SIG,%d0
-        bne.s   2f
-        moveq   #3,%d0
-        and.l   %d1,%d0                           | mode 1 or 2
-        beq.s   2f
-        subq.l  #3,%d0
-        beq.s   2f
-        lea     VMODE,%a0
-        move.b  %d1,(%a0,%d2.l)
-        bset    %d2,%d3
-        move.l  %d2,%d0
-        lsl.l   #2,%d0
-        lea     FADE_ENV,%a0
-        move.l  #0x3fffffff,%d1
-        move.l  %d1,(%a0,%d0.l)                   | no fade
-2:      addq.l  #1,%d2
-        moveq   #4,%d0
-        cmp.l   %d0,%d2
-        bne.s   1b
-9:      move.b  %d3,WMASK
-        movem.l (%sp),%d2-%d3/%a2
-        lea     12(%sp),%sp
-        lea     FADE_ENV,%a0                      | displaced
-        jmp     fade_level_resume
 
         | ------------------------------------------------------------------
         | The chorus's index load `mvsb 0x8000517e,%d0` (HPF's modulated
@@ -358,8 +319,16 @@ voice:
         mulu.w  %d0,%d0
         lsl.l   #4,%d0
         move.l  %d0,P_K(%a6)
-        lea     NOISE_COL,%a0
-        bsr.w   knob                              | FLD: gain (8.8)
+        lea     VMODE,%a0                         | FLD: WAV the COL knob, CHD
+        mvz.b   (%a0,%d6.l),%d0                   | the sound's (VFOLD); 0..127
+        btst    #1,%d0
+        beq.s   7f
+        lea     VFOLD,%a0
+        mvz.b   (%a0,%d6.l),%d0
+        bra.s   8f
+7:      lea     NOISE_COL,%a0
+        bsr.w   knob
+8:                                                | gain (8.8):
         mulu.w  #12,%d0                           | 1 + FLD x 12 / 256,
         beq.s   2f                                | 0 = no folder
         addi.l  #256,%d0
@@ -550,3 +519,91 @@ snippets:
 
         | 1/n, Q15, n = 1..4
 scales: .short  32767, 16384, 10923, 8192
+
+        | ==================================================================
+        | In cave8 (the shelved inputs build's space)
+        | ==================================================================
+        .section .wv2,"ax"
+
+        | ------------------------------------------------------------------
+        | After the fade envelopes are updated, before the levels are taken
+        | from them (`lea 0x80001be8,%a0`, re-emitted): find the voices whose
+        | sound has WAV or CHD on (WMASK, their mode bytes in VMODE) and set
+        | their envelopes to full. A CHD voice's chord comes from the COL knob
+        | (so it locks), its FLD from the sound's word 102 (VFOLD).
+        | ------------------------------------------------------------------
+        .align  2
+fad_gate:
+        lea     -16(%sp),%sp
+        movem.l %d2-%d4/%a2,(%sp)
+        moveq   #0,%d3                            | the mask
+        move.l  project_ptr,%d0
+        jeq     9f
+        move.l  %d0,%a0
+        move.l  PROJECT_KIT_FX_STORAGE(%a0),%d0
+        jeq     9f
+        move.l  %d0,%a2
+        lea     SND_WAV-SND0_FROM_S(%a2),%a2      | a2 = track 0's live WAV word
+        moveq   #0,%d2                            | voice
+1:      lea     VOICE_TRACK,%a0
+        move.l  %d2,%d0
+        lsl.l   #2,%d0
+        move.l  (%a0,%d0.l),%d1
+        moveq   #3,%d0
+        cmp.l   %d0,%d1
+        jhi     2f                                | not on a synth track
+        mulu.w  #SND_SIZE,%d1
+        move.l  %d1,%d4                           | the sound, from track 0's
+        mvz.w   (%a2,%d1.l),%d1                   | its sound's word 103
+        move.l  %d1,%d0
+        lsr.l   #8,%d0
+        cmpi.l  #WAV_SIG,%d0
+        jne     2f
+        moveq   #3,%d0
+        and.l   %d1,%d0                           | mode 1 or 2
+        jeq     2f
+        subq.l  #3,%d0
+        jeq     2f
+        bclr    #7,%d1                            | bit 7 is 0012's RES LIMIT
+        btst    #1,%d1
+        jeq     5f
+        lea     NOISE_COL,%a0                     | CHD: the chord is COL's live
+        move.l  %d2,%d0                           | value (locks, LFOs, scenes):
+        add.l   %d0,%d0                           | 13 zones over 0..127
+        mvs.w   (%a0,%d0.l),%d0
+        asr.l   #8,%d0
+        jsr     c127
+        mulu.w  #NCHORDS,%d0
+        lsr.l   #7,%d0
+        lsl.l   #2,%d0
+        addq.l  #2,%d0
+        move.l  %d0,%d1                           | the mode byte: chord << 2 | 2
+        mvz.w   -2(%a2,%d4.l),%d4                 | and FLD, the sound's word 102
+        move.l  %d4,%d0                           | (0x46xx, else 0)
+        lsr.l   #8,%d0
+        cmpi.l  #FOLD_SIG,%d0
+        jeq     6f
+        moveq   #0,%d4
+6:      moveq   #0x7f,%d0
+        and.l   %d0,%d4
+        lea     VFOLD,%a0
+        move.b  %d4,(%a0,%d2.l)
+5:      lea     VMODE,%a0
+        move.b  %d1,(%a0,%d2.l)
+        bset    %d2,%d3
+        move.l  %d2,%d0
+        lsl.l   #2,%d0
+        lea     FADE_ENV,%a0
+        moveq   #-1,%d1
+        lsr.l   #2,%d1                            | 0x3fffffff
+        move.l  %d1,(%a0,%d0.l)                   | no fade
+2:      addq.l  #1,%d2
+        moveq   #4,%d0
+        cmp.l   %d0,%d2
+        jne     1b
+9:      move.b  %d3,WMASK
+        movem.l (%sp),%d2-%d4/%a2
+        lea     16(%sp),%sp
+        lea     FADE_ENV,%a0                      | displaced
+        jmp     fade_level_resume
+

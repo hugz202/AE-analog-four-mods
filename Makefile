@@ -38,7 +38,8 @@ verify: build
 	$(PY) tools/verify.py
 
 # Everything in this release -> build/A4_OS1.56_full.syx
-FULL := 0001-scale-lock 0002-slide-303 0006-fx-slot 0007-digital-path 0008-pages 0010-wave-osc
+FULL := 0001-scale-lock 0002-slide-303 0006-fx-slot 0007-digital-path 0008-pages 0010-wave-osc \
+	0011-rand-track 0012-res-limit
 full: symbols layout
 	$(PY) tools/build.py --mods $(FULL) --tag full
 	$(PY) tools/verify.py --tag full

@@ -88,9 +88,15 @@ turning a knob there does nothing.
 
 The A4 digitises every voice to feed its effects. With **DIG** on, the track's analog
 dry sound is muted and that digitised copy is processed instead:
-DRV -> BIT -> SRR, then out to the main outputs at LEV (centred, a couple of
-milliseconds behind the analog tracks) **and** into the effect sends, so the delay,
-reverb and chorus hear the distorted sound.
+low-cut -> DRV -> BIT -> SRR, then out to the main outputs at LEV (centred, a couple
+of milliseconds behind the analog tracks) **and** into the effect sends, so the
+delay, reverb and chorus hear the distorted sound.
+
+- **Low-cut**: always on, a fixed 12 dB/oct high-pass ahead of the drive, so the low
+  end of a bass or acid line doesn't swamp the distortion: -6 dB at 75 Hz, -3 dB at
+  about 110 Hz, -16 dB at C1. It is roughly filter 2 in HP2 at FRQ 32, RES 0. It
+  applies at DRV 0 too, so a clean DIG track is a little thinner in the bass than the
+  analog path.
 
 - **CHR** (full build only) picks the drive's character:
   - **HARD**: a plain digital clipper (Machinedrum / Monomachine style).
@@ -107,9 +113,9 @@ reverb and chorus hear the distorted sound.
 - **SRR** holds each sample for 1 + SRR/4 samples (0 = off).
 - **LEV** only trims the digital track against the analog ones: about 100 matches
   the same sound on the analog path, 127 is about +2 dB above that.
-- The effect sends get the processed signal turned down a little as DRV rises
-  (-2.5 dB at DRV 64, -6 dB at 127), because a clipped signal is denser than a clean
-  one at the same peak level.
+- The effect sends follow **LEV**, as the dry output does: once LEV puts the digital
+  track level with the clean sound, its delay, reverb and chorus sends are level with
+  it too (at DRV 0 and LEV 100 they match the analog path's).
 
 The AMP page's own VOL still sets how hard the voice hits the digital path, so it
 works as an input gain.
@@ -137,19 +143,27 @@ On a synth track, press **OSC1** twice for the **NOISE** page. Its 4th knob is a
 digital oscillator) or **CHD** (a chord of that oscillator). The oscillator plays
 instead of the noise, at **OSC1's pitch** (note, TUN, FIN, bend, slide, vibrato and
 LFOs on OSC1's pitch all follow), and goes through the voice's analog filters and VCA
-as the noise does. The knob below the first one picks the chord and is labelled with
-its name. With WAV or CHD on, the page is relabelled:
+as the noise does. With WAV or CHD on, the page is relabelled:
 
-| NOISE knob | WAV off | WAV / CHD on | values (WAV / CHD on) |
+| NOISE knob | OFF | WAV | CHD |
 |---|---|---|---|
-| 1 | SNH | SHP | the wave: 0 sine, 42 triangle, 85 saw, 127 square, morphing in between |
-| 2 | COL | FLD | wavefolder: 0 = clean, 127 = about 7x into the fold |
-| 3 | FAD | FM | FM depth: a sine at **OSC2's pitch** modulates the wave; 0 = none, 127 = deep (about two cycles of phase) |
-| 4 | OFF | WAV / CHD | the mode |
-| 5 | LEV | LEV | level; 0 = silent, so turn it up |
-| 6 | (chord) | (chord) | CHD's chord, see below |
+| 1 | SNH | SHP: the wave: 0 sine, 42 triangle, 85 saw, 127 square, morphing in between | SHP |
+| 2 | COL | FLD: wavefolder, 0 = clean, 127 = about 7x into the fold | **the chord**, labelled with its name (see below) |
+| 3 | FAD | FM: FM depth: a sine at **OSC2's pitch** modulates the wave; 0 = none, 127 = deep (about two cycles of phase) | FM |
+| 4 | OFF | WAV | CHD (the mode) |
+| 5 | LEV | LEV: level; 0 = silent, so turn it up | LEV |
+| 6 | --- | --- | **FLD**: the chord's wavefolder, 0 = clean, 127 = about 7x |
 
 ### Chords
+
+In CHD, knob 2 picks the chord: its range is split into 13 zones of about 10 values
+(0-9 OCT, 10-19 5TH, 20-29 MAJ, 30-39 MIN, 40-49 SU2, 50-59 SU4, 60-68 MA7, 69-78
+MI7, 79-88 DO7, 89-98 MI9, 99-108 HDX, 109-118 SW1, 119-127 SW2). It is the stock
+noise COL parameter underneath, so the chord can be **p-locked** (grid record, hold a
+trig, turn knob 2: the label shows the locked chord), moved by an **LFO** (it steps
+through the chords) or set by a **scene**. On a long release the chord can fall back
+to the knob's chord during the tail, when the A4 gives the voice back its unlocked
+value.
 
 | name | notes (semitones above OSC1's note) |
 |---|---|
@@ -172,12 +186,15 @@ cycle, so there is no flanging swirl at the start of the note.
 
 ### Good to know
 
-- **The mode and chord are saved in the sound**, not the kit: they follow the sound
-  into kits, the sound pool and copies (the chord is kept while the mode is OFF).
-  Sounds made on the stock OS load with it OFF. It can't be p-locked: holding a trig
-  and turning knob 4 or 6 does nothing.
-- SHP, FLD, FM and LEV are the stock noise parameters, so p-locks, LFOs and saved
-  sounds work on them; OFF gives the noise back with the same knob positions.
+- **The mode and CHD's FLD are saved in the sound**, not the kit (in two parameter
+  words the stock OS leaves unused): they follow the sound into kits, the sound pool
+  and copies. Sounds made on the stock OS load with it OFF. Neither can be p-locked:
+  holding a trig and turning knob 4 or 6 does nothing.
+- SHP, COL (FLD in WAV, the chord in CHD), FM and LEV are the stock noise
+  parameters, so p-locks, LFOs and saved sounds work on them; OFF gives the noise
+  back with the same knob positions.
+- Sounds saved in CHD with an earlier version of this mod (where knob 6 was the
+  chord) come back with a different chord and no fold: set both again and save.
 - FM: OSC2's TUN / FIN set the modulator's pitch (OSC2's LEV can stay at 0: only its
   pitch is used). With WAV / CHD on, the wave is never faded: FAD only sets the FM
   depth. A sound's FAD is usually 64, so FM starts at half depth when you first turn
@@ -195,6 +212,34 @@ cycle, so there is no flanging swirl at the start of the note.
   silent. Several chord tracks together with the digital path run fine, but four
   heavy chord tracks on top of a busy kit can reach the limit.
 
+## 0012 Resonance limit
+
+**FUNC + OSC1** (SOUND SETUP) has a new checkbox under F1 RESONANCE BOOST: **RESONANCE
+LIMIT**. Tick it (YES, or turn the encoder) and that sound's filter resonances are
+scaled down so they can be swept without self-oscillating: F1 RES 0..127 plays as
+0..80, F2 RES as 0..64. The whole knob travel stays usable, and the scaling applies
+after the knob, p-locks, LFOs and envelopes are combined, so nothing pushes past the
+ceiling. It is saved with the sound and follows it through kits, the sound pool and
+copies.
+
+## 0011 Random track
+
+Hold a **track key** and press **YES**: that track is cleared and filled with a random
+line over its length (the pattern's, or the track's own in per-track mode):
+
+- trigs on about 62 % of the steps, the first step always;
+- each with a note in **KEY NOTE + KEY SCALE** (NOTE SETUP; pentatonic minor when KEY
+  SCALE is OFF), around the track's default note: mostly the root, some octaves and
+  fifths, the rest any scale note from an octave below to just under an octave above;
+- about a quarter of the trigs accented and a sixth slid (with the 303 slide on, a
+  slide glides from that note into the next).
+
+Press YES again (track key held) for another line. Hold the track key and press
+**LEFT** to undo: the track comes back exactly as it was before the last random line,
+p-locks included. The pop-up says RANDOM TRACK / RANDOM UNDONE. The FX track is left
+alone; the CV track works like the synth tracks. TRACK + UP / DOWN are still stock's
+transpose.
+
 ## First-flash checklist
 
 1. It boots and plays a pattern normally.
@@ -209,6 +254,12 @@ cycle, so there is no flanging swirl at the start of the note.
 8. OSC1 twice shows NOISE with SNH COL FAD OFF LEV. Knob 4 to WAV: SHP FLD FM WAV
    LEV, and with NOISE LEV up (OSC1 / OSC2 LEV at 0) a pitched tone that follows
    notes, TUN and bend. SHP sweeps sine -> triangle -> saw -> square.
-9. Knob 4 to CHD: knob 6 names the chord (OCT ... SW2) and the chord plays.
+9. Knob 4 to CHD: knob 2 names the chord (OCT ... SW2) as it turns and the chord
+   plays; knob 6 is FLD and folds it. Grid record, hold a trig, turn knob 2: the
+   label shows the locked chord, and in playback that step plays it.
 10. Save the sound to the pool and load it on another track: the oscillator setting
-    comes with it. A sound from before the mods loads with it OFF.
+    (and CHD's FLD) comes with it. A sound from before the mods loads with it OFF.
+11. FUNC + OSC1: RESONANCE LIMIT under F1 RESONANCE BOOST. A sound that
+    self-oscillates at RES 127: tick it and it stops short; untick, it screams again.
+12. Track key + YES: a random line in the key and scale; track key + LEFT: the track
+    as it was.

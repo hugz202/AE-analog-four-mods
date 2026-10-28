@@ -8,9 +8,11 @@ firmware with extra features :
 | **0001 scale lock** | KEY SCALE in NOTE SETUP gains 35 scales; live notes, trig-key step entry and the TRIG page NOTE encoder stay in KEY NOTE + KEY SCALE (Digitone II style) |
 | **0002 303 slide** | per track: put the slide trig on the note you glide *from*; it is tied into the next note, which glides in legato - no LEN tweaking |
 | **0006 kit persistence** | lets the kit carry the extra per-track settings below through saves and power cycles (stock kits still load; stock simply ignores the extras) |
-| **0007 digital path / distortion** | per track, swap the analog dry signal for the A4's own digitised copy and run it through drive (HARD / RAT / OD characters, or HARD only in the lighter `make hard` build), bit and sample-rate reduction - the distorted signal also feeds the delay, reverb and chorus |
+| **0007 digital path / distortion** | per track, swap the analog dry signal for the A4's own digitised copy and run it through a low-cut, drive (HARD / RAT / OD characters, or HARD only in the lighter `make hard` build), bit and sample-rate reduction - the distorted signal also feeds the delay, reverb and chorus, at the same level as the dry |
 | **0008 DIST page** | a second AMP page (press AMP twice) holding 0007's settings and 0002's slide switch |
-| **0010 digital wave / chord oscillator** | per sound, the noise generator becomes a digital oscillator at OSC1's pitch: sine / triangle / saw / square morph, wavefolder, FM from a sine at OSC2's pitch - or a chord of it (13 types, including a Hendrix 7#9 and two 4-voice supersaws); the NOISE page is relabelled for it, and the setting is saved in the sound |
+| **0010 digital wave / chord oscillator** | per sound, the noise generator becomes a digital oscillator at OSC1's pitch: sine / triangle / saw / square morph, wavefolder, FM from a sine at OSC2's pitch - or a chord of it (13 types, including a Hendrix 7#9 and two 4-voice supersaws) that can be p-locked per trig; the NOISE page is relabelled for it, and the setting is saved in the sound |
+| **0011 random track** | hold a track key and press YES: the track gets a random line in KEY NOTE + KEY SCALE, with accents and slides; LEFT undoes it |
+| **0012 resonance limit** | a RESONANCE LIMIT box in SOUND SETUP: that sound's filter resonances are scaled to stop short of self-oscillation, so they can be swept freely |
 
 How to use them on the instrument: [docs/MANUAL.md](docs/MANUAL.md).
 How to build a firmware with the mods you want: [BUILD.md](BUILD.md).
@@ -61,10 +63,13 @@ stock/             put the official OS 1.56 .syx here
 
 ## Status
 
-On OS 1.56 the `make hard` build has run the whole first-flash checklist on an
-Analog Four MK1; `make full` (the three drive characters) has been checked in an
-emulator only. On OS 1.55 both have run on the instrument. Other combinations build
-and verify, but have had less play time.
+On OS 1.56 the release builds (`make full` / `make hard`) run on an Analog Four MK1:
+the scale lock, 303 slide, DIST page and digital path (with its low-cut), the wave /
+chord oscillator (with p-locked chords) and the resonance limit have all been
+played on the instrument. The random track (0011) is in the same builds and has been
+checked in an emulator. On OS 1.55 (its own branch, without 0011 / 0012) both builds
+have run on the instrument. Other combinations build and verify, but have had less
+play time.
 
 ## Thanks
 

@@ -40,7 +40,9 @@ the registry; the build checks a hash of their stock bytes before writing there)
 The case for them is static - no call, branch, pointer, vtable entry or switch-table
 case reaches them - plus emulator coverage: they never ran in seven long sessions
 that reached 540 KB of code. The first hardware run (2026-10-17, `make hard`) went
-through the whole checklist cleanly. A third, `cave3`, is a 1 KB gap
+through the whole checklist cleanly. The mods added since (0010's chord labels, 0011,
+0012) use more of these dead-code runs, `cave7` .. `cave28`, found and guarded the
+same way; those builds have run on the instrument too. A third, `cave3`, is a 1 KB gap
 between the chorus's lookup tables that no index can reach (0010 lives there, and
 its detour on the chorus clamps the one index that could). There is almost no room
 left: a new mod has to find space (`make cavescan` lists candidates, most of which

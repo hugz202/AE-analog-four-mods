@@ -107,14 +107,21 @@ dry_gate:
         .equ    CHR_OFF,    50                    | S + 50 + t: per-track CHR
         | 0010's WAV switch lives in each sound: the track's live sound is in
         | the 338-byte storage format at S - 1352 + 338 t, and the oscillator's
-        | mode and chord type are its unused parameter word 103 (+226), set
-        | only when its high byte is WAV_SIG (sounds from older OSes can carry
-        | other values there).
+        | mode is its unused parameter word 103 (+226), set only when its high
+        | byte is WAV_SIG (sounds from older OSes can carry other values there).
+        | Since 2026-10-26 a CHD sound's chord is its COL knob (13 zones, so it
+        | locks; named from the value each knob draw shows) and its FLD is the
+        | unused word 102 (+224, FOLD_SIG): 0010 reads both the same way.
         .equ    SND_SIZE,   338
         .equ    SND0_FROM_S, 1352
         .equ    SND_WAV,    226
+        .equ    FOLD_SIG,   0x46                  | word 102 = 0x46xx: CHD's FLD
+        .equ    F_FOLD,     8                     | (a layer entry's E_OFF for it)
+        .equ    LASTCOL,    0x46803034            | COL's value as last drawn (8.8,
+                                                  | 0010's free DDR)
         .equ    WAV_SIG,    0x57                  | word 103 = 0x57xx when set:
-                                                  | xx = chord type << 2 | mode
+                                                  | xx = mode (bits 2..6, the old
+                                                  | chord type, are no longer read)
         .equ    NCHORDS,    13
         .equ    PAGE_DIST,  17
         .equ    PAGE_NOISE, 7
@@ -124,7 +131,7 @@ dry_gate:
         | Per-track DSP state off HOLD, a REC-byte record per track (a5 steps
         | by REC), copied to the stack around the track's sample loop:
         .equ    FS,         4
-        .equ    REC,        14*FS
+        .equ    REC,        16*FS
         .equ    HV,         0*FS                  | the held sample
         .equ    CNT,        1*FS                  | the hold count
         .equ    MAKEUP,     2*FS                  | makeup, Q8
@@ -139,7 +146,9 @@ dry_gate:
         .equ    ESH,        11*FS                 | emphasis: hp >> ESH
         .equ    LTYPE,      12*FS                 | TYPE | STATE_TAG the states are for
         .equ    STATE_TAG,  0x5a5a00
-        .equ    SENDK,      13*FS                 | send trim, Q8
+        .equ    SENDK,      13*FS                 | the sends' gain, Q8 (from LEV)
+        .equ    H1,         14*FS                 | the input HP's two states (hp2)
+        .equ    H2,         15*FS
         .align  2
 fxin_gate:
         lea     -140(%sp),%sp                     | displaced
@@ -251,10 +260,7 @@ fxin_gate:
 10:     move.l  %d5,%d0
         divu.l  %d1,%d0
         move.l  %d0,MAKEUP(%a5)
-        mvz.b   F_DRV(%a2),%d0                    | send trim, Q8: 256 - DRV
-        neg.l   %d0                               | (DRV 64 -2.5 dB, 127 -6 dB):
-        addi.l  #256,%d0                          | a clipped voice is denser than
-        move.l  %d0,SENDK(%a5)                    | a clean one at the same peak
+        jsr     hp_set                            | SENDK, the HP's states (.dp3)
         moveq   #-1,%d4                           | BIT 0: mask -1, half 0
         sub.l   %a6,%a6
         mvz.b   F_BIT(%a2),%d0
@@ -276,6 +282,7 @@ fxin_gate:
 
 2:      move.l  (%a0),%d0                         | x
         asr.l   #8,%d0
+        jsr     hp2                               | the input HP (.dp3)
         .if     P_CHR                             | RAT/OD: emphasis and pre-clip LP
         tst.l   TYPE(%a5)
         beq.s   20f
@@ -375,7 +382,8 @@ fxin_gate:
         lea     REC(%a5),%a5
         subq.l  #1,%d7
         bne.w   1b
-99:     jmp     fx_block_body
+99:
+        jmp     fx_block_body
 
         | ------------------------------------------------------------------
         | fx_block, after its output loop (a4 just past the 32 output pairs):
@@ -387,6 +395,61 @@ fxin_gate:
         | gain is LEV * 13 / 128 (LEV 100 = 10.2), 127 = +2 dB over it.
         | The displaced store goes first; a0 and d1 must survive (stock stores
         | them next).
+
+        .section .dp3,"ax"
+        | ------------------------------------------------------------------
+        | The input HP, ahead of everything on the digital path (the drive is
+        | otherwise most sensitive to an acid line's low end): two one-pole
+        | high-passes in x, lp += (x - lp) * 5 / 512, hp = x - lp, each 75 Hz
+        | (-ln(1 - 5/512) x 48 kHz / 2 pi): 12 dB/oct, -6 dB at 75 Hz, the
+        | emulator's model of filter 2 in HP2 at RES 0 (k = 2: two equal poles)
+        | at FRQ ~32. Shifts and adds only, no multiply to wrap: d0 = x in and
+        | out, d1 and d5 clobbered (free at the sample loop's top).
+        | ------------------------------------------------------------------
+        .align  2
+hp2:    move.l  %d0,%d5
+        sub.l   H1(%a5),%d5                       | x - lp1
+        move.l  %d5,%d1
+        asr.l   #7,%d5
+        asr.l   #8,%d1
+        asr.l   #1,%d1
+        add.l   %d1,%d5                           | (x - lp1) * 5 / 512
+        add.l   H1(%a5),%d5
+        move.l  %d5,H1(%a5)
+        sub.l   %d5,%d0                           | hp1
+        move.l  %d0,%d5
+        sub.l   H2(%a5),%d5
+        move.l  %d5,%d1
+        asr.l   #7,%d5
+        asr.l   #8,%d1
+        asr.l   #1,%d1
+        add.l   %d1,%d5
+        add.l   H2(%a5),%d5
+        move.l  %d5,H2(%a5)
+        sub.l   %d5,%d0                           | hp2
+        rts
+
+        | Per block, from fxin_gate: the sends follow LEV as the dry output
+        | does (Q8 LEV x 2.5, so LEV 100, the analog path's level, is unity, as
+        | the slot was clean); then the HP's states, cleared when out of
+        | +-2^24 (this DDR is never cleared; a real state stays under 2^23).
+        | a0, d0, d1 free.
+hp_set: mvz.b   F_LEV(%a2),%d0
+        eori.l  #64,%d0
+        mulu.w  #10,%d0
+        lsr.l   #2,%d0
+        move.l  %d0,SENDK(%a5)
+        lea     H1(%a5),%a0
+        moveq   #2,%d1
+1:      move.l  (%a0),%d0
+        addi.l  #0x1000000,%d0
+        cmpi.l  #0x2000000,%d0
+        bcs.s   2f
+        clr.l   (%a0)
+2:      addq.l  #4,%a0
+        subq.l  #1,%d1
+        bne.s   1b
+        rts
 
         .section .dsp2,"ax"
         | ------------------------------------------------------------------
@@ -624,7 +687,12 @@ enc_gate:
         .align  2
 lbl_gate:
         move.l  8(%sp),%d0
-        jbsr   name_of
+        moveq   #ID_COL,%d1                       | COL: note the value this draw
+        cmp.l   %d1,%d0                           | shows (x, 8.8: a held trig's
+        bne.s   2f                                | lock included), which names
+        move.l  12(%sp),%d1                       | a CHD sound's chord
+        move.l  %d1,LASTCOL
+2:      jbsr   name_of
         beq.s   9f
         move.l  %d0,%a0
         move.l  16(%sp),%a1                       | out
@@ -685,7 +753,7 @@ kit_notify:
         | The DIST page's knobs (0008's page 17 descriptor lists these ids):
         | {page << 9 | id .w, offset.b, XOR.b, track stride.b (0 = not per
         | track, SOUND = a field of the track's live sound's word 103, offset =
-        | its shift), max.b, name.l}.
+        | its shift; offset F_FOLD = word 102, CHD's FLD), max.b, name.l}.
         | The id picks how the A4 draws the knob: 50, 63 and 43 (OSC AM1 / AM2
         | / TRK) are on/off switches, the AMP ids are 0..127 dials.
         .equ    E_OFF,   2
@@ -725,8 +793,8 @@ layer_table:
         .byte   0, 0, SOUND, 2                    | positions: OFF WAV CHD (0010)
         .long   s_wav                             | (offset = the field's shift)
         .short  PAGE_NOISE << 9 + 94              | NOISE page, AMP CHO dial:
-        .byte   2, 0, SOUND, NCHORDS-1            | the chord type
-        .long   s_wav
+        .byte   F_FOLD, 0, SOUND, 127             | CHD's FLD (the sound's word
+        .long   s_fld                             | 102; the chord is on COL)
         .short  0
 
 s_dig:  .asciz  "DIG"
@@ -749,6 +817,112 @@ s_shp:  .asciz  "SHP"                         | the NOISE page with WAV on
 s_fld:  .asciz  "FLD"
 s_fm:   .asciz  "FM"
 
+        | snd_word(a0 = view) -> d0 = the view's track's live word 103, 0 if
+        | none. d0/d1/a0/a1.
+        .align  2
+snd_word:
+        move.l  116(%a0),-(%sp)
+        jsr     track_index_of
+        addq.l  #4,%sp
+        moveq   #3,%d1
+        cmp.l   %d1,%d0
+        bhi.s   8f
+        mulu.w  #SND_SIZE,%d0
+        move.l  %d0,%d1
+        jbsr   fx_S
+        beq.s   8f
+        add.l   %d1,%a0
+        mvz.w   SND_WAV-SND0_FROM_S(%a0),%d0
+        rts
+8:      moveq   #0,%d0
+        rts
+
+        | Names, 4 bytes each: the oscillator's modes and 0010's chords.
+        .align  2
+m_names: .asciz "OFF", "WAV", "CHD", "OFF"         | (3 letters + NUL each)
+c_names: .asciz "OCT", "5TH", "MAJ", "MIN", "SU2"
+        .asciz  "SU4", "MA7", "MI7", "DO7", "MI9"
+        .asciz  "HDX", "SW1", "SW2"
+
+        | ==================================================================
+        | In cave9 / cave10 (the shelved inputs build's space)
+        | ==================================================================
+        .section .ui6,"ax"
+
+        | name_of(d0 = id) -> d0 = our label for that knob of the view drawn
+        | last (0008's shared_draw_view), Z clear; or Z set. Settings get
+        | their names; the oscillator's two dials name their value (OFF WAV
+        | CHD, the chord); with the oscillator on, S&H, COL and FAD become
+        | SHP, FLD and FM. d2/d3 kept.
+        .align  2
+name_of:
+        lea     -12(%sp),%sp
+        movem.l %d2-%d3/%a2,(%sp)
+        move.l  %d0,%d2                           | id
+        move.l  shared_draw_view,%d0
+        jeq     8f
+        move.l  %d0,%a2
+        move.l  %d0,%a0
+        jsr     shared_view_page
+        move.l  %d0,%d3                           | page
+        jbsr   key_find
+        jeq     1f
+        mvz.b   E_TRACK(%a1),%d0
+        cmpi.l  #SOUND,%d0
+        jeq     3f
+        move.l  E_NAME(%a1),%d0
+        jra     9f
+3:      move.l  %a1,-(%sp)                        | a sound field: its value
+        move.l  %a2,%a0
+        jbsr   snd_word
+        move.l  (%sp)+,%a1
+        mvz.b   E_OFF(%a1),%d1
+        moveq   #F_FOLD,%d2
+        cmp.l   %d2,%d1
+        jeq     5f
+        jbsr   sfield                            | the mode dial: its value
+        lea     m_names,%a0
+4:      lsl.l   #2,%d0
+        add.l   %d0,%a0
+        move.l  %a0,%d0
+        jra     9f
+1:      moveq   #PAGE_NOISE,%d0                   | the NOISE page with the
+        cmp.l   %d3,%d0                           | oscillator on
+        jne     8f
+        lea     s_shp,%a1
+        moveq   #ID_SNH,%d0
+        cmp.l   %d2,%d0
+        jeq     2f
+        lea     s_fld,%a1
+        moveq   #ID_COL,%d0
+        cmp.l   %d2,%d0
+        jeq     2f
+        lea     s_fm,%a1
+        moveq   #ID_FAD,%d0
+        cmp.l   %d2,%d0
+        jne     8f
+2:      move.l  %a1,%d3
+        move.l  %a2,%a0
+        jbsr   snd_word
+        move.l  %d0,%d1
+        lsr.l   #8,%d1
+        cmpi.l  #WAV_SIG,%d1
+        jne     8f
+        moveq   #3,%d1
+        and.l   %d1,%d0
+        jeq     8f
+        jsr     osc_name                          | (.ui8) COL in CHD: the chord
+        jra     9f
+5:      jsr     fold_name                         | (.ui8) the FLD dial
+        jra     9f
+8:      moveq   #0,%d0
+9:      movem.l (%sp),%d2-%d3/%a2
+        lea     12(%sp),%sp
+        rts
+
+
+        .section .ui2,"ax"                        | (back beside the names: room)
+
         | slot_rd(a0 = S, d2 = slot_of's offset, a1 = the entry) -> d0 = the
         | setting: the kit byte there, or (a negative offset) the entry's field
         | of the sound's word 103. slot_wr(a0, d2, d0, a1): the inverse,
@@ -760,9 +934,22 @@ slot_rd:
         mvz.b   (%a0,%d2.l),%d0
         rts
 1:      move.l  %d1,-(%sp)
-        mvz.w   (%a0,%d2.l),%d0
+        mvz.b   E_OFF(%a1),%d1
+        moveq   #F_FOLD,%d0
+        cmp.l   %d0,%d1
+        bne.s   2f
+        mvz.w   -2(%a0,%d2.l),%d0                 | CHD's FLD: word 102, 0x46xx
+        move.l  %d0,%d1
+        lsr.l   #8,%d1
+        cmpi.l  #FOLD_SIG,%d1
+        beq.s   3f
+        moveq   #0,%d0                            | (not set: 0)
+3:      moveq   #0x7f,%d1
+        and.l   %d1,%d0
+        bra.s   4f
+2:      mvz.w   (%a0,%d2.l),%d0
         jbsr   sfield
-        move.l  (%sp)+,%d1
+4:      move.l  (%sp)+,%d1
         rts
 
         | sfield(d0 = a word 103, a1 = the entry) -> d0 = the entry's field
@@ -791,7 +978,16 @@ slot_wr:
         rts
 1:      lea     -12(%sp),%sp
         movem.l %d1/%d3-%d4,(%sp)
-        mvz.w   (%a0,%d2.l),%d3
+        mvz.b   E_OFF(%a1),%d1
+        moveq   #F_FOLD,%d3
+        cmp.l   %d3,%d1
+        bne.s   4f
+        moveq   #0x7f,%d1                         | CHD's FLD: word 102 = 0x46xx
+        and.l   %d1,%d0
+        ori.l   #FOLD_SIG << 8,%d0
+        move.w  %d0,-2(%a0,%d2.l)
+        bra.s   5f
+4:      mvz.w   (%a0,%d2.l),%d3
         move.l  %d3,%d1
         lsr.l   #8,%d1
         cmpi.l  #WAV_SIG,%d1
@@ -809,105 +1005,58 @@ slot_wr:
         lsl.l   %d1,%d0
         or.l    %d0,%d3
         move.w  %d3,(%a0,%d2.l)
-        movem.l (%sp),%d1/%d3-%d4
+5:      movem.l (%sp),%d1/%d3-%d4
         lea     12(%sp),%sp
         rts
 
-        | snd_word(a0 = view) -> d0 = the view's track's live word 103, 0 if
-        | none. d0/d1/a0/a1.
-        .align  2
-snd_word:
-        move.l  116(%a0),-(%sp)
-        jsr     track_index_of
-        addq.l  #4,%sp
-        moveq   #3,%d1
-        cmp.l   %d1,%d0
-        bhi.s   8f
-        mulu.w  #SND_SIZE,%d0
-        move.l  %d0,%d1
-        jbsr   fx_S
-        beq.s   8f
-        add.l   %d1,%a0
-        mvz.w   SND_WAV-SND0_FROM_S(%a0),%d0
-        rts
-8:      moveq   #0,%d0
-        rts
 
-        | name_of(d0 = id) -> d0 = our label for that knob of the view drawn
-        | last (0008's shared_draw_view), Z clear; or Z set. Settings get
-        | their names; the oscillator's two dials name their value (OFF WAV
-        | CHD, the chord); with the oscillator on, S&H, COL and FAD become
-        | SHP, FLD and FM. d2/d3 kept.
+s_dsh:  .asciz  "---"
+
+        .section .ui8,"ax"
+
+        | osc_name(d0 = the mode 1..2, d2 = the id, d3 = its WAV name) -> d0 =
+        | the label: a CHD sound's COL dial is named by the chord its value
+        | picks (as the dial last drew it: LASTCOL, held trig's lock included;
+        | the engine's 13 zones over 0..127). Z clear. d1, a0.
         .align  2
-name_of:
-        lea     -12(%sp),%sp
-        movem.l %d2-%d3/%a2,(%sp)
-        move.l  %d0,%d2                           | id
-        move.l  shared_draw_view,%d0
-        beq.w   8f
-        move.l  %d0,%a2
-        move.l  %d0,%a0
-        jsr     shared_view_page
-        move.l  %d0,%d3                           | page
-        jbsr   key_find
-        beq.s   1f
-        mvz.b   E_TRACK(%a1),%d0
-        cmpi.l  #SOUND,%d0
-        beq.s   3f
-        move.l  E_NAME(%a1),%d0
-        bra.s   9f
-3:      move.l  %a1,-(%sp)                        | a sound field: its value
-        move.l  %a2,%a0
-        jbsr   snd_word
-        move.l  (%sp)+,%a1
-        jbsr   sfield
-        lea     m_names,%a0
-        tst.b   E_OFF(%a1)
-        beq.s   4f
-        lea     c_names,%a0
-        moveq   #NCHORDS-1,%d1
-        cmp.l   %d1,%d0
-        bls.s   4f
-        move.l  %d1,%d0
-4:      lsl.l   #2,%d0
-        add.l   %d0,%a0
-        move.l  %a0,%d0
-        bra.s   9f
-1:      moveq   #PAGE_NOISE,%d0                   | the NOISE page with the
-        cmp.l   %d3,%d0                           | oscillator on
-        bne.s   8f
-        lea     s_shp,%a1
-        moveq   #ID_SNH,%d0
-        cmp.l   %d2,%d0
-        beq.s   2f
-        lea     s_fld,%a1
+osc_name:
+        subq.l  #2,%d0
+        bne.s   6f
         moveq   #ID_COL,%d0
         cmp.l   %d2,%d0
-        beq.s   2f
-        lea     s_fm,%a1
-        moveq   #ID_FAD,%d0
-        cmp.l   %d2,%d0
-        bne.s   8f
-2:      move.l  %a1,%d3
-        move.l  %a2,%a0
-        jbsr   snd_word
+        bne.s   6f
+        move.l  LASTCOL,%d0
+        asr.l   #8,%d0
+        bpl.s   1f
+        moveq   #0,%d0
+1:      moveq   #127,%d1
+        cmp.l   %d1,%d0
+        ble.s   2f
+        move.l  %d1,%d0
+2:      mulu.w  #NCHORDS,%d0
+        lsr.l   #7,%d0
+        lsl.l   #2,%d0
+        lea     c_names,%a0
+        add.l   %d0,%a0
+        move.l  %a0,%d0
+        rts
+6:      move.l  %d3,%d0
+        rts
+
+        | fold_name(d0 = the sound's word 103) -> d0 = the FLD dial's label:
+        | FLD in CHD, else "---" (it folds chords only). Z clear. d1, a0.
+        .align  2
+fold_name:
+        lea     s_dsh,%a0
         move.l  %d0,%d1
         lsr.l   #8,%d1
         cmpi.l  #WAV_SIG,%d1
-        bne.s   8f
+        bne.s   1f
         moveq   #3,%d1
         and.l   %d1,%d0
-        beq.s   8f
-        move.l  %d3,%d0
-        bra.s   9f
-8:      moveq   #0,%d0
-9:      movem.l (%sp),%d2-%d3/%a2
-        lea     12(%sp),%sp
+        subq.l  #2,%d0
+        bne.s   1f
+        lea     s_fld,%a0
+1:      move.l  %a0,%d0
         rts
 
-        | Names, 4 bytes each: the oscillator's modes and 0010's chords.
-        .align  2
-m_names: .asciz "OFF", "WAV", "CHD", "OFF"         | (3 letters + NUL each)
-c_names: .asciz "OCT", "5TH", "MAJ", "MIN", "SU2"
-        .asciz  "SU4", "MA7", "MI7", "DO7", "MI9"
-        .asciz  "HDX", "SW1", "SW2"
