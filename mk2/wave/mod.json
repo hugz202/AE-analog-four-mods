@@ -1,0 +1,41 @@
+{
+ "id": "wave",
+ "version": "1.1",
+ "title": "WAVE",
+ "category": "Sound",
+ "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
+ "license": "MIT",
+ "description": "Turns a synth track's noise generator into a digital oscillator at OSC1's pitch (note, tune, bend, slide, vibrato and LFOs included), or a chord of it. On the NOISE page, knob D picks OFF, WAV or CHD and knob F the chord (OCT 5TH MAJ MIN SU2 SU4 MA7 MI7 DO7 MI9 HDX, and the supersaws SW1 SW2). With WAV or CHD on, S&H becomes SHP (sine, triangle, saw, square, morphing), COL becomes FLD (a wavefolder) and FAD becomes FM (a sine at OSC2's pitch modulating the wave's phase); LEV stays the level. It plays through the noise path into the analog voice, so the filters, overdrive and VCA shape it. SHP, FLD, FM and LEV are the stock noise parameters, so locks and LFOs work on them; the mode and chord are kept with the sound, in core-a4's mod storage, and cannot be p-locked. Saw and square are not band-limited. Two sounding chord tracks are the comfortable maximum; a third slows the screen. Needs core-a4 0.2 and dist (its knob names). Port of AE-analog-four-mods 0010-wave-osc (Analog Four MK1).",
+ "device": "analog-four-mk2",
+ "os": "1.56",
+ "sources": [
+  "wave.s",
+  "wave.c"
+ ],
+ "storage": [
+  {"sym": "wave_set", "scope": "sound", "bits": 6}
+ ],
+ "sites": [
+  {"addr": "0x400ffe04", "stock": "41f980002be8", "op": "jmp", "target": "wave_fad"},
+  {"addr": "0x400ffe50", "stock": "43f980005ba8", "op": "jmp", "target": "wave_mix"}
+ ],
+ "subscribe": [
+  {"event": "ev_tick", "fn": "wave_tick", "order": 50},
+  {"event": "ev_project", "fn": "wave_project", "order": 50}
+ ],
+ "contribute": [
+  {"to": "core_pages", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_noise_page", 0]]},
+  {"to": "core_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_mode_params", 0]]},
+  {"to": "core_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_chord_params", 0]]},
+  {"to": "ae_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_names_osc", 0]]},
+  {"to": "ae_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_names_mode", 0]]},
+  {"to": "ae_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_names_chord", 0]]}
+ ],
+ "resources": {
+  "core": "0.2"
+ },
+ "requires": [
+  "core",
+  "dist"
+ ]
+}

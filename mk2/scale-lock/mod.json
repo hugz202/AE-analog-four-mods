@@ -1,0 +1,33 @@
+{
+ "id": "scale-lock",
+ "version": "1.0",
+ "title": "SCALE LOCK",
+ "category": "Sequencer",
+ "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
+ "license": "MIT",
+ "description": "NOTE SETUP's KEY SCALE grows from OFF/MAJ/MIN to OFF and 35 scales (MAJ, MIN, DOR, PHRY, LYD, MIXO, LOCR, then the rest of the firmware's own scale library). Anything but OFF locks the track to KEY NOTE and KEY SCALE: notes played on the trig keys, and everything that records them, snap to the nearest note in the scale, and the TRIG page NOTE encoder steps from one note in the scale to the next, on the track's note and on held trigs' locks. MAJ and MIN restrict too. The setting is saved with the pattern; a pattern with a new scale opened on stock reads KEY SCALE OFF. Needs core-a4 0.2, whose parameter routines it reaches one step in. Port of AE-analog-four-mods 0001-scale-lock (Analog Four MK1).",
+ "device": "analog-four-mk2",
+ "os": "1.56",
+ "sources": [
+  "scale-lock.s"
+ ],
+ "sites": [
+  {"addr": "0x400bce08", "stock": "4e56ffa8707f", "op": "jmp", "target": "scale_lock_play"},
+  {"addr": "0x400afa38", "stock": "4feffff048d7041c", "op": "jmp", "target": "scale_lock_step"},
+  {"addr": "0x400232ea", "stock": "246f0010262f001c", "op": "jmp", "target": "scale_lock_note_delta"},
+  {"addr": "0x4002388a", "stock": "4feffff048d7041c", "op": "jmp", "target": "scale_lock_lock_delta"},
+  {"addr": "0x40023faa", "stock": "4fef000cd085", "op": "jmp", "target": "scale_lock_lock_add"},
+  {"addr": "0x400dbc8a", "stock": "206e00142f360cf4", "op": "jmp", "target": "scale_lock_name"},
+  {"addr": "0x400b5ad8", "stock": "7002", "op": "bytes", "new": "7023", "kind": "code"},
+  {"addr": "0x400b5ade", "stock": "7402", "op": "bytes", "new": "7423", "kind": "code"},
+  {"addr": "0x40009a08", "stock": "7402", "op": "bytes", "new": "7423", "kind": "code"},
+  {"addr": "0x40079f3a", "stock": "6714", "op": "bytes", "new": "6e20", "kind": "code"},
+  {"addr": "0x40079f42", "stock": "6618", "op": "bytes", "new": "660c", "kind": "code"}
+ ],
+ "resources": {
+  "core": "0.2"
+ },
+ "requires": [
+  "core"
+ ]
+}

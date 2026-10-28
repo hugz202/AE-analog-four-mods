@@ -1,0 +1,27 @@
+{
+ "id": "slide",
+ "version": "1.0",
+ "title": "303 SLIDE",
+ "category": "Sequencer",
+ "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
+ "license": "MIT",
+ "description": "Slides the 303 way on the synth tracks: put the slide trig on the note you glide from. That note is tied into the next trig (its length is raised to reach it) and the next note glides in legato, with no LEN tweaking. With dist in the build it is per track, by SLD on the DIST page (kept with the kit); without dist every synth track slides this way. Needs core-a4 0.2. Port of AE-analog-four-mods 0002-slide-303 (Analog Four MK1).",
+ "device": "analog-four-mk2",
+ "os": "1.56",
+ "sources": [
+  "slide.s"
+ ],
+ "sites": [
+  {"addr": "0x4007a48c", "stock": "41f2b8004a2801ca", "op": "jmp", "target": "slide_gate"},
+  {"addr": "0x4007a7f2", "stock": "41f30a007c10", "op": "jmp", "target": "slide_look"}
+ ],
+ "weak": [
+  "dist_sld"
+ ],
+ "resources": {
+  "core": "0.2"
+ },
+ "requires": [
+  "core"
+ ]
+}

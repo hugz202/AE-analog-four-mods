@@ -17,6 +17,11 @@ How to build a firmware with the mods you want: [BUILD.md](BUILD.md).
 How to flash and get back to stock: [docs/FLASHING.md](docs/FLASHING.md).
 **Read [docs/HAZARDS.md](docs/HAZARDS.md) before flashing.**
 
+## MKII
+
+Ports of these mods to the Analog Four **MKII**, OS 1.56, as elekloader elemods, are in
+[mk2/](mk2/README.md). Everything else in this README is about the MK1.
+
 ## What you need
 
 - An Analog Four or Analog Keys **MK1** (not the MKII), and the official **OS 1.56**

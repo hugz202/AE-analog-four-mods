@@ -1,0 +1,55 @@
+{
+ "id": "dist",
+ "version": "1.0",
+ "title": "DIST",
+ "category": "Sound",
+ "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
+ "license": "MIT",
+ "description": "A digital path with distortion for each synth track, on a DIST page: on a synth track press AMP a second time. DIG swaps the track's analog dry sound for the A4's own digitised copy of it and processes that instead. CHR picks the drive's character (HARD, a digital clipper; RAT, a treble lift, an op-amp roll-off, hard clip and a 4 kHz tone; OD, a 720 Hz mid hump, soft clip and 2.5 kHz), DRV the drive (more grit at about the same level), BIT the bit reduction, SRR the sample-rate reduction and LEV the processed signal's level (about 100 is level with the analog path). The processed signal also feeds the delay, reverb and chorus. SLD is slide's 303 mode for the track. The settings are kept with the kit, in core-a4's mod storage (all 128 bits of a kit's room); they cannot be p-locked. The knobs are hidden parameter records (the oscillators' Pitch and Freq Mod and F1+F2 Freq, which no stock page shows), drawn as stock knobs and named on this page only. Needs core-a4 0.2. Port of AE-analog-four-mods 0007-digital-path and 0008-pages (Analog Four MK1).",
+ "device": "analog-four-mk2",
+ "os": "1.56",
+ "sources": [
+  "dist.s",
+  "dist.c"
+ ],
+ "storage": [
+  {"sym": "dist_trk0", "scope": "kit", "bits": 32},
+  {"sym": "dist_trk1", "scope": "kit", "bits": 32},
+  {"sym": "dist_trk2", "scope": "kit", "bits": 32},
+  {"sym": "dist_trk3", "scope": "kit", "bits": 32}
+ ],
+ "sites": [
+  {"addr": "0x400fa6c4", "stock": "2013ae000800", "op": "jmp", "target": "dist_dry"},
+  {"addr": "0x400fe73c", "stock": "4fefff7448d77cfc", "op": "jmp", "target": "dist_fxin"},
+  {"addr": "0x400feace", "stock": "23c041864a74", "op": "jmp", "target": "dist_fxout"},
+  {"addr": "0x4009e79e", "stock": "202f00080c8000000127", "op": "jmp", "target": "dist_sname"},
+  {"addr": "0x4009e7c2", "stock": "202f00080c8000000127", "op": "jmp", "target": "dist_lname"},
+  {"addr": "0x4018734c", "stock": "0000400000004000", "op": "bytes", "new": "0000000000007f00"},
+  {"addr": "0x40187384", "stock": "0000400000004000", "op": "bytes", "new": "0000000000007f00"},
+  {"addr": "0x40187624", "stock": "0000400000004000", "op": "bytes", "new": "0000000000007f00"},
+  {"addr": "0x4018765c", "stock": "0000400000004000", "op": "bytes", "new": "0000000000007f00"},
+  {"addr": "0x401878fc", "stock": "0000400000004000", "op": "bytes", "new": "0000000000007f00"},
+  {"addr": "0x40187934", "stock": "0000400000004000", "op": "bytes", "new": "0000000000007f00"},
+  {"addr": "0x40187e3c", "stock": "0000400000004000", "op": "bytes", "new": "0000000000007f00"}
+ ],
+ "subscribe": [
+  {"event": "ev_tick", "fn": "dist_tick", "order": 50},
+  {"event": "ev_project", "fn": "dist_project", "order": 50}
+ ],
+ "collections": {
+  "ae_names": 4
+ },
+ "contribute": [
+  {"to": "core_pages", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_page", 0]]},
+  {"to": "core_pages", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_amp_page", 0]]},
+  {"to": "core_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_params", 0]]},
+  {"to": "core_view_pages", "order": 30, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_view_page", 0]]},
+  {"to": "ae_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_names", 0]]}
+ ],
+ "resources": {
+  "core": "0.2"
+ },
+ "requires": [
+  "core"
+ ]
+}
