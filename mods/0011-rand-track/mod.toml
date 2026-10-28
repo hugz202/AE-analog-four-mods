@@ -7,7 +7,7 @@ title   = "Random track: TRACK + YES fills the track with a random line, TRACK +
 enabled = false
 
 # re-only | built | hardware-verified | retracted
-status  = "built"
+status  = "hardware-verified"
 
 summary = """
 Hold a track key and press YES: the track is copied (for the undo), cleared (stock

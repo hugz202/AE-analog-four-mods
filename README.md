@@ -65,9 +65,9 @@ stock/             put the official OS 1.56 .syx here
 
 On OS 1.56 the release builds (`make full` / `make hard`) run on an Analog Four MK1:
 the scale lock, 303 slide, DIST page and digital path (with its low-cut), the wave /
-chord oscillator (with p-locked chords) and the resonance limit have all been
-played on the instrument. The random track (0011) is in the same builds and has been
-checked in an emulator. On OS 1.55 (its own branch, without 0011 / 0012) both builds
+chord oscillator (with p-locked chords), the random track and the resonance limit
+have all been played on the instrument. On OS 1.55 (its own branch, without 0011 /
+0012) both builds
 have run on the instrument. Other combinations build and verify, but have had less
 play time.
 
