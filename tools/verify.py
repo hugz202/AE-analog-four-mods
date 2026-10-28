@@ -16,10 +16,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import layout
 import symbols as symmod
 from toolchain import tool
+import unpack
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
-STOCK_SYX = ROOT / "stock" / "Analog-Four_Analog-Keys_OS1.56.syx"
+STOCK_SYX = ROOT / "stock" / symmod.load(ROOT / "re" / "symbols.toml")["meta"]["stock_syx"]
 EFT = ROOT / "vendor" / "elektron-firmware-tool" / "elektron-firmware-tool"
 
 
@@ -50,6 +51,40 @@ def diff_regions(a: bytes, b: bytes, base: int):
         else:
             i += 1
     return spans
+
+
+def inplace_gap(stored: bytes, stage: int, load: int) -> int:
+    """The bootstrap copies the packed MAIN OS section (its 8-byte [len][sum]
+    header included) to `stage` and depacks it to `load`, over itself. Returns the
+    smallest distance between the next byte the depacker writes and the next byte
+    it has still to read; it must stay above 0, or the depack eats its own input
+    and the unit runs a corrupt OS."""
+    b = unpack.Bits(stored, 8)
+    lead = stage - load                 # where the stream sits, seen from the output
+    n, last, low = 0, 1, None
+    while True:
+        if b.bit():
+            b.byte()
+            n += 1
+            d = lead + b.p - n
+        else:
+            g = b.gamma()
+            if g == 2:
+                off = last
+            else:
+                off = ((g << 8) + b.byte()) & 0xFFFFFFFF
+                if off == 767:
+                    break
+                off = (off - 767) & 0xFFFFFFFF
+                last = off
+            sl = 2 * b.bit() + b.bit()
+            L = sl if sl else b.gamma() + 2
+            if off > 3328:
+                L += 1
+            n += L + 1
+            d = lead + b.p - n
+        low = d if low is None or d < low else low
+    return low
 
 
 def main():
@@ -108,21 +143,52 @@ def main():
               f"sha {hashlib.sha256(back).hexdigest()[:16]})")
         ok = False
 
-    # No bootstrap SECTION - the bootstrap image is inside MAIN OS and the OS flashes
-    # it itself when its version word is newer. It must be stock, byte for byte.
-    lo = meta["embedded_bootstrap_start"] - base
-    hi = meta["embedded_bootstrap_end"] - base
-    if hashlib.sha256(back[lo:hi]).hexdigest() == meta["embedded_bootstrap_sha256"]:
-        print(f"ok   embedded bootstrap image unchanged ({hi - lo:,} B) - recovery path intact")
-    else:
-        print(f"FAIL the embedded bootstrap image 0x{lo + base:08x}..0x{hi + base:08x} changed")
+    if "embedded_bootstrap_start" in meta:
+        # The MK1: no bootstrap SECTION - the bootstrap image is inside MAIN OS and
+        # the OS flashes it itself when its version word is newer. It must be stock,
+        # byte for byte.
+        lo = meta["embedded_bootstrap_start"] - base
+        hi = meta["embedded_bootstrap_end"] - base
+        if hashlib.sha256(back[lo:hi]).hexdigest() == meta["embedded_bootstrap_sha256"]:
+            print(f"ok   embedded bootstrap image unchanged ({hi - lo:,} B) - recovery path intact")
+        else:
+            print(f"FAIL the embedded bootstrap image 0x{lo + base:08x}..0x{hi + base:08x} changed")
+            ok = False
+
+    # Every section but MAIN OS must come back exactly as stock carried it - above
+    # all the MKII's bootstrap section (the STARTUP menu, the recovery path).
+    want = sorted(meta.get("other_sections", []))
+    extra = sorted(f.name for f in tmp.iterdir() if f.name != "section_3_MAIN_OS.bin")
+    if extra != want:
+        print(f"FAIL the rebuilt .syx carries {extra} beside MAIN OS, stock {want}")
         ok = False
-    extra = [f.name for f in tmp.iterdir() if f.name != "section_3_MAIN_OS.bin"]
-    if extra:
-        print(f"FAIL the rebuilt .syx carries more than MAIN OS: {extra}")
-        ok = False
     else:
-        print("ok   the rebuilt .syx carries MAIN OS only, like stock")
+        stock_x = BUILD / "extract"
+        same = [n for n in want if (tmp / n).read_bytes() == (stock_x / n).read_bytes()]
+        if same == want:
+            print(f"ok   every other section is stock: {', '.join(want) or 'none (MAIN OS only)'}")
+        else:
+            print(f"FAIL sections changed: {sorted(set(want) - set(same))}")
+            ok = False
+
+    # The MKII bootstrap stages the packed MAIN OS at `stage` and depacks it over
+    # itself; the container also has to end below the flash the OS keeps for itself.
+    if "stage" in meta:
+        _, stream = unpack.transport_decode(syx.read_bytes())
+        _, cont, secs = unpack.parse_container(stream)
+        main_sec = next(cont[o:o + n] for sid, o, n, _ in secs if sid == 3)
+        gap = inplace_gap(main_sec, meta["stage"], base)
+        if gap > 0:
+            print(f"ok   MAIN OS depacks in place with {gap:,} B to spare")
+        else:
+            print(f"FAIL MAIN OS overruns its own packed input in place (gap {gap})")
+            ok = False
+        end = meta["flash_at"] + len(cont)
+        if end <= meta["flash_limit"]:
+            print(f"ok   container ends at flash 0x{end:06x} (limit 0x{meta['flash_limit']:06x})")
+        else:
+            print(f"FAIL container ends at flash 0x{end:06x}, past 0x{meta['flash_limit']:06x}")
+            ok = False
 
     # the diff must be exactly the claimed regions
     claimed = []

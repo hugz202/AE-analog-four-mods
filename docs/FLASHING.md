@@ -1,7 +1,7 @@
-# Flashing - Analog Four / Analog Keys MK1
+# Flashing - Analog Four MKII
 
 The A4 takes one format, a `.syx`, sent like any OS update. **Back up your projects
-first** (Transfer, or C6), and keep the stock `stock/Analog-Four_Analog-Keys_OS1.56.syx`
+first** (Transfer, or C6), and keep the stock `stock/Analog-Four_MKII_OS1.56.syx`
 at hand.
 
 ## Normal route (Transfer, USB)
@@ -24,17 +24,20 @@ If a build ever fails to boot:
 3. In Transfer (or another SysEx tool), send the stock `.syx`. With Transfer:
    CONNECTION > "LEGACY OS UPGRADE mode", select the file, UPGRADE.
 
+On the MKII the bootstrap is a section of its own in the `.syx`; our builds carry
+Elektron's unchanged, and `make verify` checks that.
+
 This is served by the bootstrap in flash, not by the OS, so it still comes up after
 an OS that does not boot. It needs the DIN MIDI port (a MIDI interface into the A4's
 MIDI IN), not USB.
 
 ## Suggested order for a first session
 
-1. `build/A4_OS1.56_control.syx` - optional, two minutes. Stock code, only repacked
+1. `build/A4MK2_OS1.56_control.syx` - optional, two minutes. Stock code, only repacked
    by the tool. If it boots and plays, the packer works on your unit, so any later
    problem is a mod, not the file format.
-2. Your build (`make full`, or your own selection). Go through the checklist at the
-   end of docs/MANUAL.md.
+2. Your build (`make full`, or your own selection). On the MKII follow
+   docs/HWTEST-MK2.md, which records what to look for on a first run.
 
 ## Back to stock
 

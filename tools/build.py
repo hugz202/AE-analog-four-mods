@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Build patched Analog Four / Analog Keys MK1 firmware from stock + the enabled mods.
+"""Build patched Analog Four MKII firmware from stock + the enabled mods.
 
-Ported from rytm1_mods-main (Analog Rytm MK1), the same platform and container:
-ONE section, MAIN OS - there is no separate bootstrap section, because the bootstrap
-image rides inside MAIN OS (see docs/HAZARDS.md) - so the recovery-path check is a
-hash of that embedded range instead of a section comparison.
+Ported from the MK1 branches (OS-1.56, OS-1.55). The MK1 container carries ONE
+section, MAIN OS, with the bootstrap riding inside it; the MKII container (ELE3)
+carries five - meta, bootstrap, FPGA, MAIN OS and a panel MCU image - and the
+bootstrap is a section of its own. Whatever re/symbols.toml [meta] says the stock
+file holds is checked here; only MAIN OS is ever replaced (see docs/HAZARDS.md).
 
 Every build starts from the pinned stock image and asserts its way forward:
 stock checksum, extracted MAIN OS checksum and size, registry layout, the cave
 target actually being free, and each detour host still holding its expected
 stock bytes. Any mismatch aborts rather than producing a plausible-looking image.
 
-Only MAIN OS (section 3) is ever rewritten, and never inside the embedded
-bootstrap image (re/symbols.toml [meta], 0x40226ee8..0x40233fc0 on OS 1.56).
+Only MAIN OS (section 3) is ever rewritten. On a device whose bootstrap rides
+inside MAIN OS (the MK1), never inside that embedded image either.
 """
 
 import argparse
@@ -31,7 +32,7 @@ from toolchain import tool
 
 ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
-STOCK_SYX = ROOT / "stock" / "Analog-Four_Analog-Keys_OS1.56.syx"
+STOCK_SYX = ROOT / "stock" / symmod.load(ROOT / "re" / "symbols.toml")["meta"]["stock_syx"]
 EFT_DIR = ROOT / "vendor" / "elektron-firmware-tool"
 EFT = EFT_DIR / "elektron-firmware-tool"
 
@@ -66,6 +67,8 @@ def ensure_tool():
 
 
 def embedded_bootstrap_ok(img: bytes, meta) -> bool:
+    if "embedded_bootstrap_start" not in meta:
+        return True                     # the MKII: the bootstrap is its own section
     lo = meta["embedded_bootstrap_start"] - meta["base"]
     hi = meta["embedded_bootstrap_end"] - meta["base"]
     return sha256(img[lo:hi]) == meta["embedded_bootstrap_sha256"]
@@ -82,9 +85,10 @@ def extract_sections(meta) -> bytes:
         src = tmp / f"section_{MAINOS_SECTION}_MAIN_OS.bin"
         if not src.exists():
             raise SystemExit(f"extraction produced no {src.name}; got {list(tmp.iterdir())}")
-        others = [f.name for f in tmp.iterdir() if f.name != src.name]
-        if others:
-            raise SystemExit(f"A4 stock should hold MAIN OS only, also got {others}")
+        others = sorted(f.name for f in tmp.iterdir() if f.name != src.name)
+        if others != sorted(meta.get("other_sections", [])):
+            raise SystemExit(f"stock should hold MAIN OS and {meta.get('other_sections', [])}, "
+                             f"got also {others}")
         shutil.copy(src, cache)
     data = cache.read_bytes()
     if len(data) != meta["mainos_size"]:
@@ -156,8 +160,9 @@ def assemble(mod, claims, params=None):
     defs = []
     for k, v in sorted((params or {}).items()):
         defs += ["--defsym", f"P_{k.upper()}={int(v)}"]
-    # ColdFire V4 with EMAC and NO FPU, as the Rytm MK1. -mcpu=5475 plus -mno-float
-    # makes any FPU instruction an assembly error rather than a crash on the unit.
+    # ColdFire V4 with EMAC and NO FPU. On the MK1 -mcpu=5475 plus -mno-float makes any
+    # FPU instruction an assembly error rather than a crash on the unit; the MKII's
+    # MCF5441x is 54455 (no FPU at all), as elekloader's Analog Four MKII profile.
     meta = symmod.load(ROOT / "re" / "symbols.toml")["meta"]
     cpu = [f"-mcpu={meta.get('cpu', '5475')}", *meta.get("cpu_flags", ["-mno-float"])]
     run([tool("as"), *cpu, "-I", BUILD, "-I", ROOT, *defs, "-o", obj, stub])
@@ -419,7 +424,7 @@ def main():
         tag += "_" + "_".join(f"{k}{v}" for m in sorted(overrides)
                               for k, v in sorted(overrides[m].items()))
     mainos_out = BUILD / f"mainos_{tag}.bin"
-    syx_out = BUILD / f"A4_{meta['target']}_{tag}.syx"
+    syx_out = BUILD / f"{meta.get('out_prefix', 'A4')}_{meta['target']}_{tag}.syx"
     mainos_out.write_bytes(img)
     run([EFT, "-i", STOCK_SYX, "-c", str(MAINOS_SECTION), mainos_out, "-o", syx_out])
 
