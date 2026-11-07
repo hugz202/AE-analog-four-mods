@@ -1,7 +1,8 @@
         | SPDX-License-Identifier: MIT
         | wave - AE 0010 (digital wave / chord oscillator) for the Analog Four
-        | MKII, OS 1.56, as an elekloader elemod on core-a4 0.2. This file is
-        | the audio side; wave.c is the NOISE page's two knobs.
+        | MKII, OS 1.56, as an elekloader elemod on core-a4 0.5. This file is
+        | the audio side and the knob-name gates; wave.c is the NOISE page's
+        | two knobs.
         |
         | The noise generator (audio interrupt, 32 samples a block) builds three
         | filtered noises per voice and crossfades them by COL into the voice's
@@ -17,9 +18,10 @@
         |     is closed (no note sounding) is not computed: its sources are
         |     cleared instead, so idle tracks cost almost no CPU.
         |
-        | The mode is a sound field in core-a4's mod storage (wave.c); the UI
-        | tick copies each synth track's into wave_trk (chord type << 2 | mode:
-        | 0 off, 1 WAV, 2 CHD), which the audio reads.
+        | The mode and the chord are sound fields in core-a4's mod storage
+        | (wave.c), both lockable; each audio block wave_render (wave.c) puts
+        | each synth track's, its trig's locks in their place, into wave_trk
+        | (chord type << 2 | mode: 0 off, 1 WAV, 2 CHD), which the audio reads.
         |
         |   pitch  OSC1's NCO word for the voice (0x80006a2c + 8v: note, tune,
         |          bend, slide, vibrato, LFOs, all in), a 32-bit increment at
@@ -50,6 +52,8 @@
 
         | OS 1.56 addresses (re/symbols.toml on the MK2-OS-1.56 branch)
         .equ    noise_mix_resume,  0x400ffe56
+        .equ    short_name_resume, 0x4009e7a8
+        .equ    long_name_resume,  0x4009e7cc
         .equ    fade_level_resume, 0x400ffe0a
 
         .equ    NCHORDS,      13
@@ -92,7 +96,7 @@
         .equ    P_SIZE,       72
 
         .text
-        .globl  wave_mix, wave_fad
+        .globl  wave_mix, wave_fad, wave_sname, wave_lname
 
         | ------------------------------------------------------------------
         | The final noise mix, at `lea 0x80005ba8,%a1` (its first instruction;
@@ -106,14 +110,6 @@ wave_mix:
         moveq   #0,%d6                            | voice
 1:      btst    %d6,%d7
         beq.s   2f
-        lea     VOICE_TRACK,%a0                   | a track on dist's digital path
-        move.l  %d6,%d0                           | has its dry VCA word zeroed
-        lsl.l   #2,%d0                            | (DIG mutes the analog dry
-        move.l  (%a0,%d0.l),%d0                   | sound), so the word says
-        lea     dist_set,%a0                      | nothing there: always compute
-        mulu.w  #6,%d0                            | (wave_fad took only voices on
-        tst.b   (%a0,%d0.l)                       | tracks 0..3)
-        bne.s   3f
         move.l  %d6,%d0                           | its VCA closed: nothing can
         mulu.w  #VCA_STRIDE,%d0                   | be heard, so the sources are
         lea     VCA,%a0                           | cleared instead (a block's
@@ -501,6 +497,46 @@ chords: .byte   0, 0xff, 0xff, 0xff   | WAV 0
         .byte   0, 3, 6, 10           | HDX 0+4+10+15
         .byte   11, 12, 13, 14        | SW1 -12 -4 +4 +12 cents
         .byte   15, 16, 17, 18        | SW2 -25 -8 +8 +25 cents
+
+
+        | ==================================================================
+        | Knob names
+        | ==================================================================
+
+        | ------------------------------------------------------------------
+        | The parameter sets' name getters (set, id), at their entries
+        | (0x4009e79e short, 0x4009e7c2 long; both `movel %sp@(8),%d0;
+        | cmpil #295,%d0`). From core-a4 0.5 core calls these for every id it
+        | does not name itself: wave_name_of (wave.c) names the mode and chord
+        | knobs by their value, and S&H, COL and FAD as SHP, FLD and FM while
+        | the active track's sound has WAV or CHD on, and answers 0 for the
+        | rest. d0/d1/a0/a1 are free, as for any call.
+        | ------------------------------------------------------------------
+        .align  2
+wave_sname:
+        clr.l   -(%sp)                            | wave_name_of(id, 0): short
+        move.l  12(%sp),-(%sp)
+        jsr     wave_name_of
+        addq.l  #8,%sp
+        tst.l   %d0
+        beq.s   9f
+        rts
+9:      move.l  8(%sp),%d0                        | displaced
+        cmpi.l  #295,%d0                          | displaced
+        jmp     short_name_resume
+
+        .align  2
+wave_lname:
+        pea     1                                 | wave_name_of(id, 1): long
+        move.l  12(%sp),-(%sp)
+        jsr     wave_name_of
+        addq.l  #8,%sp
+        tst.l   %d0
+        beq.s   9f
+        rts
+9:      move.l  8(%sp),%d0                        | displaced
+        cmpi.l  #295,%d0                          | displaced
+        jmp     long_name_resume
 
         .data
         .globl  wave_trk

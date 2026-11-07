@@ -1,32 +1,34 @@
 /* SPDX-License-Identifier: MIT */
 /* wave - the NOISE page's oscillator knobs (AE 0010) for the Analog Four
- * MKII, OS 1.56, on core-a4 0.2. wave.s is the oscillator.
+ * MKII, OS 1.56, on core-a4 0.5. wave.s is the oscillator and the name gates.
  *
  * The NOISE page (page 7) is answered through core_pages with two more
  * knobs: D, the mode (OFF / WAV / CHD), and F, the chord (OCT 5TH MAJ MIN SU2
  * SU4 MA7 MI7 DO7 MI9 HDX SW1 SW2), each knob's name its value. While the
- * track's sound has WAV or CHD on, S&H, COL and FAD are named SHP, FLD and
- * FM (the oscillator's use of them).
+ * active track's sound has WAV or CHD on, S&H, COL and FAD are named SHP, FLD
+ * and FM (the oscillator's use of them), there and in the lists that show
+ * them (from core-a4 0.5 the name getters cannot tell who asks).
  *
- *   knob  setting  the hidden record it is drawn as
- *   D     mode     37 (the synth's "None" record), as AMP PAN's marker
- *   F     chord    140 (the FX track's "None" record), as AMP CHO's dial
- *
- * Neither id is on a stock page, so core_params answers for them everywhere.
- * At the first tick their RAM records take a stock knob's whole record
- * (encoder feel, callbacks and dial art) and are marked unlockable (a turn
- * with a trig held makes no lock). The names, short under the knob and long
- * in the header while it turns, come through dist's ae_names table.
- *
- * The setting is a 6-bit sound field in core-a4's mod storage (wave_set:
- * chord type << 2 | mode), so it travels with the sound through kits, the
- * sound pool and copies. The UI tick copies each synth track's into wave_trk
- * for the audio interrupt, and an edit does at once.
+ * The knobs are mod ids above 0x126 (0x310 mode, 0x311 chord), and both
+ * settings are sound fields in core-a4's mod storage (wave_mode, 2 bits;
+ * wave_chord, 4 bits), so they travel with the sound through kits, the sound
+ * pool and copies. Both are lockable (core-a4 0.5): hold a trig and turn the
+ * knob, or turn it in live recording, and that trig plays its own mode or
+ * chord. The mode is a choice and takes locks only, landing at the trig. The
+ * chord is also a destination ("mod": LFOs, envelopes, routes, macros,
+ * CONTROL IN) with a CC, declared "smooth": false, so a change lands at once
+ * and modulation and Param Slide step through the chord list one whole chord
+ * at a time (core's value read, rounded). The chord's short name, CHRD, is
+ * its knob's label and its name on a Dest knob; the mode's lock param carries
+ * none, so core asks the name getters for its label, which wave.s answers
+ * with the value. Each audio block (ev_render_out) wave_render puts each track's mode
+ * (its trig's lock in its place) and chord (core's value read) into
+ * wave_trk; the UI tick keeps the sounds' own in wave_base.
  */
 #include <stdint.h>
 #include "analog-four-mk2/pages.h"
 #include "analog-four-mk2/store.h"
-#include "ae_names.h"
+#include "analog-four-mk2/lock.h"
 
 #define PROJECT_PTR 0x418717c8      /* the live project */
 #define KIT_FX_STORAGE 0x11ac       /* the kit's FX storage, kit + 0x564 */
@@ -35,13 +37,10 @@
 #define SOUND_SIZE 0x152
 #define ACTIVE_TRACK 48             /* project + 48: the active track's object */
 #define TRACK_INDEX_OF 0x400adbd2
-#define PARAM_INFO 0x41856c44       /* the RAM records, 0x54 bytes an id */
-#define PI_STRIDE 0x54
-#define LOCK_OFF 0x20               /* record +0 bit 5: the id takes no lock */
 
 #define PAGE_NOISE 7
-#define ID_MODE 37
-#define ID_CHORD 140
+#define ID_MODE 0x310
+#define ID_CHORD 0x311
 #define ID_SNH 74
 #define ID_COL 75
 #define ID_FAD 76
@@ -50,9 +49,16 @@
 
 typedef int32_t (*track_index_of_t)(void *);
 
-STORE_FIELD(wave_set);
+STORE_FIELD(wave_mode);
+STORE_FIELD(wave_chord);
+
+const struct core_lock_param wave_lp_mode = {STORE(wave_mode), ID_MODE, 0, 2, 0, "Wave Mode",
+                                             CORE_LOCK_CATEGORY("WAVE")};
+const struct core_lock_param wave_lp_chord = {STORE(wave_chord), ID_CHORD, 0, NCHORDS - 1, "CHRD", "Wave Chord",
+                                              CORE_LOCK_CATEGORY("WAVE")};
 
 extern unsigned char wave_trk[];    /* wave.s: each synth track's mode byte */
+static volatile unsigned char wave_base[4];   /* the sounds' own, chord << 2 | mode */
 
 static const char mode_names[3][4] = {"OFF", "WAV", "CHD"};
 static const char chord_names[NCHORDS][4] = {
@@ -81,22 +87,31 @@ static void *sound(int32_t t)
     return s ? s - KIT_FROM_FX + KIT_SOUND0 + SOUND_SIZE * t : 0;
 }
 
+static unsigned clamp_mode(unsigned m)
+{
+    return m > 2 ? 0 : m;
+}
+
+static unsigned clamp_chord(unsigned c)
+{
+    return c >= NCHORDS ? NCHORDS - 1 : c;
+}
+
+/* track t's sound's setting, chord << 2 | mode */
 static unsigned setting(int32_t t)
 {
     void *s = sound(t);
-    unsigned v = s ? core_store_get(STORE(wave_set), s, 0) : 0;
-    if ((v & 3) == 3)
-        v &= ~3u;
-    if ((v >> 2) >= NCHORDS)
-        v = (v & 3) | (NCHORDS - 1) << 2;
-    return v;
+    if (!s)
+        return 0;
+    return clamp_chord(core_store_get(STORE(wave_chord), s, 0)) << 2 |
+           clamp_mode(core_store_get(STORE(wave_mode), s, 0));
 }
 
 static void cache_all(void)
 {
     int32_t t;
     for (t = 0; t < 4; t++)
-        wave_trk[t] = setting(t);
+        wave_base[t] = setting(t);
 }
 
 /* stepped settings move once per TURN turns, as dist's do */
@@ -118,13 +133,14 @@ static int32_t step_of(int32_t delta, int32_t id)
     return 0;
 }
 
+/* the raw value, in 8.8 (a trig's lock is shown through wave_text too) */
 static int wave_get(int32_t id, int32_t *value)
 {
     unsigned v = setting(active_track());
     if (id == ID_MODE)
-        *value = (int32_t)(((v & 3) * 127 + 1) >> 1) << 8;     /* 0, 64, 127 */
+        *value = (int32_t)(v & 3) << 8;
     else if (id == ID_CHORD)
-        *value = (int32_t)((v >> 2) * 127 / (NCHORDS - 1)) << 8;
+        *value = (int32_t)(v >> 2) << 8;
     else
         return 0;
     return 1;
@@ -151,9 +167,11 @@ static int wave_delta(void *view, int32_t id, int32_t delta, int32_t func)
         chord += step_of(delta, id);
         chord = chord < 0 ? 0 : chord > NCHORDS - 1 ? NCHORDS - 1 : chord;
     }
-    v = (unsigned)chord << 2 | (unsigned)mode;
-    core_store_set(STORE(wave_set), s, 0, v);
-    wave_trk[t] = v;
+    if (id == ID_MODE)
+        core_store_set(STORE(wave_mode), s, 0, (unsigned)mode);
+    else
+        core_store_set(STORE(wave_chord), s, 0, (unsigned)chord);
+    cache_all();
     return 1;
 }
 
@@ -163,13 +181,19 @@ static const char *value_name(int32_t id)
     return id == ID_MODE ? mode_names[v & 3] : chord_names[v >> 2];
 }
 
+/* the value's text, from the value turned or locked */
 static int wave_text(struct core_text *t)
 {
-    const char *s, *n;
+    const char *n;
     char *b = t->buf;
-    if (t->id != ID_MODE && t->id != ID_CHORD)
+    unsigned v = ((unsigned)t->value >> 8) & 0xff;
+    if (t->id == ID_MODE)
+        n = mode_names[clamp_mode(v)];
+    else if (t->id == ID_CHORD)
+        n = chord_names[clamp_chord(v)];
+    else
         return CORE_TEXT_PASS;
-    for (s = value_name(t->id), n = s; (*b++ = *n++) != 0;)
+    while ((*b++ = *n++) != 0)
         ;
     return CORE_TEXT_DONE;
 }
@@ -180,14 +204,12 @@ const struct core_param wave_chord_params = {ID_CHORD, ID_CHORD, wave_get, wave_
 const struct core_page wave_noise_page = {PAGE_NOISE, "NOISE (P 2/2)",
                                           {ID_SNH, ID_COL, ID_FAD, ID_MODE, 77, ID_CHORD}};
 
-/* the knobs' names: the two settings their value; S&H, COL and FAD the
- * oscillator's while the track's sound has it on */
-static const char *wave_name(int32_t id, int32_t long_name)
+/* wave.s's name gates: the mode its value (the chord's are core's); S&H, COL and FAD the
+ * oscillator's while the active track's sound has it on; 0 for any other id */
+const char *wave_name_of(int32_t id, int32_t long_name)
 {
     if (id == ID_MODE)
         return long_name ? "Wave Mode" : value_name(id);
-    if (id == ID_CHORD)
-        return long_name ? "Wave Chord" : value_name(id);
     if (id >= ID_SNH && id <= ID_FAD && (setting(active_track()) & 3)) {
         if (long_name)
             return id == ID_SNH ? "Wave Shape" : id == ID_COL ? "Wave Fold" : "Wave FM";
@@ -196,26 +218,31 @@ static const char *wave_name(int32_t id, int32_t long_name)
     return 0;
 }
 
-const struct ae_name wave_names_osc = {ID_SNH, ID_FAD, wave_name};
-const struct ae_name wave_names_mode = {ID_MODE, ID_MODE, wave_name};
-const struct ae_name wave_names_chord = {ID_CHORD, ID_CHORD, wave_name};
+/* each audio block, after core's snapshot: each synth track's mode (its
+ * trig's lock in its place) and chord (core's value read, unsmoothed, rounded
+ * to a whole chord) */
+void wave_render(void)
+{
+    static int h;
+    int32_t t, m, c;
+    if (!h)
+        h = core_param_handle(STORE(wave_chord));
+    for (t = 0; t < 4; t++) {
+        m = core_lock_value(t, STORE(wave_mode));
+        m = m >= 0 ? (int32_t)clamp_mode(m) : wave_base[t] & 3;
+        c = wave_base[t] >> 2;
+        if (m) {
+            core_param_values(t, &h, 1, 0, &c);
+            c = c == CORE_PARAM_NONE ? wave_base[t] >> 2 : (c + 128) >> 8;
+            c = c < 0 ? 0 : (int32_t)clamp_chord(c);
+        }
+        wave_trk[t] = c << 2 | m;
+    }
+}
 
 void wave_tick(void *ctrl)
 {
-    static int ready;
     (void)ctrl;
-    if (!ready) {
-        static const int16_t ids[2][2] = {{ID_MODE, 97}, {ID_CHORD, 94}};
-        unsigned i, j;
-        ready = 1;
-        for (i = 0; i < 2; i++) {
-            uint32_t *r = (uint32_t *)(PARAM_INFO + PI_STRIDE * ids[i][0]);
-            const uint32_t *d = (const uint32_t *)(PARAM_INFO + PI_STRIDE * ids[i][1]);
-            r[0] = d[0] | LOCK_OFF;
-            for (j = 1; j < PI_STRIDE / 4; j++)     /* the encoder's steps, feel, */
-                r[j] = d[j];                        /* callbacks and dial art */
-        }
-    }
     cache_all();
 }
 

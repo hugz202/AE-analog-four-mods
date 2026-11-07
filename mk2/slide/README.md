@@ -7,7 +7,7 @@ trig (its length is raised to reach it plus a quarter step) and the next note gl
 in legato, with no LEN tweaking. Without the slide trig the notes are separate.
 
 With [dist](../dist/README.md) in the build, it is per synth track: SLD on the DIST
-page, kept with the kit. Without dist, every synth track slides this way (the MK1's
+page, kept with the sound (dist 2.0; with the kit before). Without dist, every synth track slides this way (the MK1's
 "always on" build).
 
 ## What changed from the MK1
@@ -16,7 +16,7 @@ page, kept with the kit. Without dist, every synth track slides this way (the MK
   with the MKII's LEN tick table (0x40218384); the two hooks are in the trig routine
   (0x4007a48c, after LEN is resolved, and 0x4007a7f2, the look-ahead's test).
 - **SLD** was a byte in the kit's spare FX words, which dist kept. Here dist keeps it
-  in core-a4's kit storage and publishes the four tracks' switches in `dist_sld`, a
+  in core-a4's storage (a sound field from dist 2.0) and publishes the four tracks' switches in `dist_sld`, a
   weak import: without dist it reads as zeros, and zeros mean "every track".
 
 ## Status

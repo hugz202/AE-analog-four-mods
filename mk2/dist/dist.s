@@ -1,7 +1,7 @@
         | SPDX-License-Identifier: MIT
         | dist - AE 0007 (digital path) and 0008 (the DIST page) for the Analog
-        | Four MKII, OS 1.56, as an elekloader elemod on core-a4 0.2. This file
-        | is the audio side and the knob-name gate; dist.c is the page.
+        | Four MKII, OS 1.56, as an elekloader elemod on core-a4 0.5. This file
+        | is the audio side and SLD's knob-name gate; dist.c is the page.
         |
         | Per synth track, on the DIST page (press AMP twice): DIG puts the track
         | on the digital path (its analog dry sound is muted and the A4's own
@@ -9,15 +9,14 @@
         | RAT, OD), DRV the drive, BIT the bit reduction, SRR the sample-rate
         | reduction, LEV the processed signal's level; SLD is slide's mode.
         |
-        | The settings are kit fields in core-a4's mod storage (dist.c). The
-        | audio interrupt never calls core: the UI tick copies each track's
-        | settings into dist_set, laid out as the MK1 kept them in the kit's
-        | spare FX words, so the code below is the image port's (MK2-OS-1.56,
-        | mods/0007-digital-path) reading dist_set where it read the kit:
+        | The settings are sound fields in core-a4's mod storage (dist.c). Each
+        | audio block dist_render (dist.c, ev_render_out) puts what each track
+        | plays (its locks and modulation included) into dist_set, laid out as
+        | the MK1 kept them in the kit's spare FX words, so the code below is
+        | the image port's (MK2-OS-1.56, mods/0007-digital-path) reading
+        | dist_set where it read the kit:
         |   dist_set + 6t + 0..5   DIG DRV BIT SRR LEV SLD for track t (0..3)
         |   dist_set + 24 + t      CHR for track t
-        | (LEV is the plain level here; the kit field keeps it XOR 64, so a kit
-        | with no dist data reads 64.)
         |
         | Calls follow the stock ABI: d0/d1/a0/a1 are scratch, the rest is saved.
 
@@ -27,8 +26,6 @@
         .equ    fx_block_tail_resume, 0x400fead4
         .equ    short_name_resume,    0x4009e7a8
         .equ    long_name_resume,     0x4009e7cc
-        .equ    KNOB_NAME_CALL,       0x4002367e  | where the knob draw's short-name call returns
-        .equ    POPUP_NAME_CALL,      0x40025c2c  | where the encoder handler's long-name call returns
 
         .equ    TRK_SIZE,   6
         .equ    F_DIG,      0
@@ -410,19 +407,14 @@ dist_fxout:
         | ------------------------------------------------------------------
         | The parameter sets' name getters (set, id), at their entries
         | (0x4009e79e short, 0x4009e7c2 long; both `movel %sp@(8),%d0;
-        | cmpil #295,%d0`): they return the record's name. The knob draw prints
-        | the short name under each knob, and the encoder handler shows the
-        | long one in the header while a knob turns. Asked from there (and only
-        | from there), an id an ae_names entry names gets that name: the hidden
-        | records the mods' pages use keep their own names everywhere else (an
-        | LFO's destination list among them). d0/d1/a0/a1 are free, as for any
-        | call.
+        | cmpil #295,%d0`). From core-a4 0.5 core names its lockable knobs
+        | itself and calls these for every other id, so only SLD's knob, the
+        | one dist knob that is not lockable (an id above 0x126, which no
+        | stock list holds), is named here: dist_name_of (dist.c) answers it
+        | and 0 for any other id. d0/d1/a0/a1 are free, as for any call.
         | ------------------------------------------------------------------
         .align  2
 dist_sname:
-        move.l  (%sp),%d0
-        cmpi.l  #KNOB_NAME_CALL,%d0
-        bne.s   9f
         clr.l   -(%sp)                            | dist_name_of(id, 0): short
         move.l  12(%sp),-(%sp)
         jsr     dist_name_of                      | (dist.c)
@@ -436,9 +428,6 @@ dist_sname:
 
         .align  2
 dist_lname:
-        move.l  (%sp),%d0
-        cmpi.l  #POPUP_NAME_CALL,%d0
-        bne.s   9f
         pea     1                                 | dist_name_of(id, 1): long
         move.l  12(%sp),-(%sp)
         jsr     dist_name_of

@@ -1,97 +1,121 @@
 /* SPDX-License-Identifier: MIT */
 /* dist - the DIST page (AE 0008) and the digital path's settings (AE 0007)
- * for the Analog Four MKII, OS 1.56, on core-a4 0.2. dist.s is the audio
- * side; this is the page.
+ * for the Analog Four MKII, OS 1.56, on core-a4 0.5. dist.s is the audio
+ * side; this is the page and the settings.
  *
  * On a synth track, AMP pressed twice: the DIST page (page 50), after stock's
  * AMP, through core-a4's page tables. AMP is retitled "AMP (P 1/2)" to match.
  *
- *   knob  setting  range               the hidden record it is drawn as
- *   A     DIG      off / on            38 (OSC1 Pitch Mod), as OSC1 AM's switch
- *   B     CHR      HARD / RAT / OD     39 (OSC1 Freq Mod), as AMP PAN's marker
- *   C     DRV      0..127              51 (OSC2 Pitch Mod), as CHO's dial
- *   D     BIT      0..127              52 (OSC2 Freq Mod), the same
- *   E     SRR      0..127              64 (OSCX Pitch Mod), the same
- *   F     LEV      0..127              65 (OSCX Freq Mod), the same
- *   G     SLD      off / on            88 (F1+F2 Freq), as OSC2 AM's switch
+ *   knob  setting  range               lock  LFO, routes, macros, CC
+ *   A     DIG      off / on            yes   no
+ *   B     CHR      HARD / RAT / OD     yes   no
+ *   C     DRV      0..127              yes   yes
+ *   D     BIT      0..127              yes   yes
+ *   E     SRR      0..127              yes   yes
+ *   F     LEV      0..127              yes   yes
+ *   G     SLD      off / on            no    no
  *
- * The seven ids are records no stock page shows (they exist only as LFO and
- * envelope destinations, with a fixed value of 64), so core_params can answer
- * for them everywhere. Their range in the parameter table becomes 0..127
- * (mod.json's byte sites): the encoder handler makes no turn of a record
- * whose range is one value. At the first tick their RAM records take the
- * encoder feel and callbacks of CHO's (FEEL) and the dial art of the record
- * named above, and are marked unlockable: a turn with a trig held makes no
- * parameter lock. Their names come from dist.s's gates on the two name
- * getters, only while the knob draw or the encoder's header asks (an LFO's
- * destination list still reads PM1, FM1 ...).
+ * The settings are sound fields in core-a4's mod storage, all 32 bits a
+ * sound keeps, so they travel with the sound (kits, the sound pool, copies),
+ * and so wave (which keeps its own in the sound) cannot share a build with
+ * dist. DIG, CHR, DRV, BIT, SRR and LEV are lockable (core-a4 0.5): hold a
+ * trig and turn the knob, or turn it in live recording. DRV, BIT, SRR and LEV
+ * are also destinations ("mod": the LFOs, the Dest knobs, the routes, the
+ * macros and CONTROL IN) and have a CC each; DIG and CHR are switches, so
+ * they take locks only and jump, with no smoothing, slide or modulation. SLD
+ * is slide's per-track mode, read by the sequencer: it has no lock.
  *
- * The settings are kit fields in core-a4's mod storage, one 32-bit field per
- * synth track (dist_trk0..3): all 128 bits a kit keeps. core_store_set
- * writes the current kit's fields through to the stored project, as stock
- * writes its own edits, so they survive a power cycle without a save. The UI
- * tick copies them into dist_set for the audio interrupt, and an edit does
- * at once.
+ * The knobs are mod ids above 0x126 (0x300..0x306): core names the lockable
+ * ones from their core_lock_param, and dist.s's gate on the name getters
+ * names SLD. Each audio block (ev_render_out, after core's snapshot) puts in
+ * dist_set what each track plays: DRV..LEV from core's value read (the
+ * sound's value or the trig's lock, smoothed, Param Slide and every
+ * modulation), DIG and CHR the trig's lock or the sound's value. The UI tick
+ * keeps the sound's DIG, CHR and SLD in dist_base and dist_sld.
  *
- * Other mods name the knobs of their own pages through the ae_names table
- * this mod declares (wave does).
+ * A new sound reads 0 in every field (core-a4 keeps no field init), so LEV
+ * starts at 0: switching DIG on with LEV at 0 sets LEV to 100, about level
+ * with the analog path.
  */
 #include <stdint.h>
 #include "analog-four-mk2/pages.h"
 #include "analog-four-mk2/store.h"
-#include "ae_names.h"
+#include "analog-four-mk2/lock.h"
 
 #define PROJECT_PTR 0x418717c8      /* the live project */
-#define KIT_FX_STORAGE 0x11ac       /* project + 364 (the kit) + 0x1030 (its FxSetup) + 16: its storage */
-#define KIT_FROM_FX 0x564           /* that storage is the edited kit's FX block, kit + 0x564 */
+#define KIT_FX_STORAGE 0x11ac       /* the kit's FX storage, kit + 0x564 */
+#define KIT_FROM_FX 0x564
+#define KIT_SOUND0 0x1c             /* a kit's sounds, 0x152 bytes each */
+#define SOUND_SIZE 0x152
 #define ACTIVE_TRACK 48             /* project + 48: the active track's object */
-#define FXSETUP 0x119c              /* project + 364 + 0x1030: the kit's FxSetup */
-#define FX_CHANGE_VT 0x4018cb34     /* the change record stock's FX setters send */
 #define TRACK_INDEX_OF 0x400adbd2
-#define PARAM_INFO 0x41856c44       /* the RAM records, 0x54 bytes an id */
-#define PI_STRIDE 0x54
-#define PI_DRAW 0x24                /* its draw callback, 16 bytes */
-#define LOCK_OFF 0x20               /* record +0 bit 5: the id takes no lock */
-#define FEEL 94                     /* AMP CHO: every knob turns as its dial does */
 
 #define PAGE_DIST 50
 #define PAGE_AMP 11
 #define TURN 3                      /* turns a position, for settings of 3..16 positions */
+#define LEV_START 100               /* LEV when DIG goes on with LEV at 0 */
+
+#define ID_DIG 0x300
+#define ID_CHR 0x301
+#define ID_DRV 0x302
+#define ID_BIT 0x303
+#define ID_SRR 0x304
+#define ID_LEV 0x305
+#define ID_SLD 0x306
 
 typedef int32_t (*track_index_of_t)(void *);
-typedef void (*notify_t)(void *fx, void *change);
 
-STORE_FIELD(dist_trk0);
-STORE_FIELD(dist_trk1);
-STORE_FIELD(dist_trk2);
-STORE_FIELD(dist_trk3);
+STORE_FIELD(dist_dig);
+STORE_FIELD(dist_chr);
+STORE_FIELD(dist_drv);
+STORE_FIELD(dist_bit);
+STORE_FIELD(dist_srr);
+STORE_FIELD(dist_lev);
+STORE_FIELD(dist_sld_f);
 
 extern unsigned char dist_set[];    /* dist.s: 6 bytes a track (DIG DRV BIT SRR LEV SLD), then CHR x 4 */
 extern unsigned char dist_sld[];    /* dist.s: 1, then each track's SLD */
 
-/* a knob: its id, its bits in the track's field, its largest value, the
- * offset in dist_set it is copied to, its name and the stock record it is drawn as */
+#define CAT CORE_LOCK_CATEGORY("DIST")
+const struct core_lock_param dist_lp_dig = {STORE(dist_dig), ID_DIG, 0, 1, "DIG", "Digital Path", CAT};
+const struct core_lock_param dist_lp_chr = {STORE(dist_chr), ID_CHR, 0, 2, "CHR", "Character", CAT};
+const struct core_lock_param dist_lp_drv = {STORE(dist_drv), ID_DRV, 0, 127, "DRV", "Drive", CAT};
+const struct core_lock_param dist_lp_bit = {STORE(dist_bit), ID_BIT, 0, 127, "BIT", "Bit Reduction", CAT};
+const struct core_lock_param dist_lp_srr = {STORE(dist_srr), ID_SRR, 0, 127, "SRR", "Sample Rate", CAT};
+const struct core_lock_param dist_lp_lev = {STORE(dist_lev), ID_LEV, 0, 127, "LEV", "Digital Level", CAT};
+
+/* a knob: its id, its field, its largest value, the offset in dist_set
+ * (24: CHR's row) */
 struct knob {
     int16_t id;
-    uint8_t shift, max, cache, donor;
-    char name[4];
-    const char *long_name;          /* the header's, while the knob turns */
+    uint8_t max, cache;
 };
 
-#define F_LEV_XOR 64                /* LEV is kept XOR 64: a kit with no dist data reads 64 */
-
 static const struct knob knobs[] = {
-    {38, 31, 1, 0, 50, "DIG", "Digital Path"},
-    {39, 29, 2, 24, 97, "CHR", "Character"},       /* dist_set + 24 + t */
-    {51, 22, 127, 1, 94, "DRV", "Drive"},
-    {52, 15, 127, 2, 94, "BIT", "Bit Reduction"},
-    {64, 8, 127, 3, 94, "SRR", "Sample Rate"},
-    {65, 1, 127, 4, 94, "LEV", "Digital Level"},
-    {88, 0, 1, 5, 63, "SLD", "303 Slide"},
+    {ID_DIG, 1, 0},
+    {ID_CHR, 2, 24},
+    {ID_DRV, 127, 1},
+    {ID_BIT, 127, 2},
+    {ID_SRR, 127, 3},
+    {ID_LEV, 127, 4},
+    {ID_SLD, 1, 5},
 };
 #define NKNOBS (sizeof knobs / sizeof knobs[0])
 
 static const char chr_names[3][4] = {"HRD", "RAT", "OD"};
+
+static unsigned field_of(int32_t id)
+{
+    switch (id) {
+    case ID_DIG: return STORE(dist_dig);
+    case ID_CHR: return STORE(dist_chr);
+    case ID_DRV: return STORE(dist_drv);
+    case ID_BIT: return STORE(dist_bit);
+    case ID_SRR: return STORE(dist_srr);
+    case ID_LEV: return STORE(dist_lev);
+    default: return STORE(dist_sld_f);
+    }
+}
 
 static const struct knob *knob_of(int32_t id)
 {
@@ -100,11 +124,6 @@ static const struct knob *knob_of(int32_t id)
         if (knobs[i].id == id)
             return &knobs[i];
     return 0;
-}
-
-static unsigned width(const struct knob *k)
-{
-    return k->max == 1 ? 1 : k->max == 2 ? 2 : 7;
 }
 
 static unsigned char *project(void)
@@ -121,83 +140,41 @@ static int32_t active_track(void)
     return ((track_index_of_t)TRACK_INDEX_OF)(p + ACTIVE_TRACK);
 }
 
-/* the current kit, as core-a4's kit scope takes it */
-static void *kit(void)
+/* track t's live sound in the current kit, as core-a4's sound scope takes it */
+static void *sound(int32_t t)
 {
     unsigned char *p = project(), *s;
-    if (!p)
+    if (!p || t < 0 || t > 3)
         return 0;
     s = *(unsigned char **)(p + KIT_FX_STORAGE);
-    return s ? s - KIT_FROM_FX : 0;
+    return s ? s - KIT_FROM_FX + KIT_SOUND0 + SOUND_SIZE * t : 0;
 }
 
-static unsigned field(int32_t t)
+static unsigned get(const struct knob *k, void *s)
 {
-    switch (t) {
-    case 0: return STORE(dist_trk0);
-    case 1: return STORE(dist_trk1);
-    case 2: return STORE(dist_trk2);
-    default: return STORE(dist_trk3);
-    }
-}
-
-static unsigned get_setting(const struct knob *k, uint32_t w)
-{
-    unsigned v = (w >> k->shift) & ((1u << width(k)) - 1);
-    if (k->id == 65)
-        v ^= F_LEV_XOR;
+    unsigned v = s ? core_store_get(field_of(k->id), s, 0) : 0;
     return v > k->max ? k->max : v;
 }
 
-static uint32_t put_setting(const struct knob *k, uint32_t w, unsigned v)
-{
-    uint32_t mask = ((1u << width(k)) - 1) << k->shift;
-    if (k->id == 65)
-        v ^= F_LEV_XOR;
-    return (w & ~mask) | ((uint32_t)v << k->shift & mask);
-}
-
-/* one track's settings into dist_set and dist_sld, for the audio and slide */
-static void cache(int32_t t, uint32_t w)
-{
-    unsigned i;
-    for (i = 0; i < NKNOBS; i++) {
-        const struct knob *k = &knobs[i];
-        unsigned char v = get_setting(k, w);
-        if (k->cache == 24)
-            dist_set[24 + t] = v;
-        else
-            dist_set[6 * t + k->cache] = v;
-    }
-    dist_sld[1 + t] = dist_set[6 * t + 5];
-}
+/* each synth track's DIG and CHR as its sound has them, for the audio side */
+static volatile unsigned char dist_base[4][2];
 
 static void cache_all(void)
 {
-    void *kp = kit();
     int32_t t;
-    for (t = 0; t < 4; t++)
-        cache(t, kp ? core_store_get(field(t), kp, 0) : 0);
-}
-
-/* the active kit's FX marked edited, as stock's FxSetup setters do */
-static void kit_notify(void)
-{
-    unsigned char *p = project();
-    struct { uint32_t vt; int32_t all; uint8_t a, b; } change = {FX_CHANGE_VT, -1, 1, 1};
-    void **fx;
-    if (!p)
-        return;
-    fx = (void **)(p + FXSETUP);
-    ((notify_t)((void **)*fx)[4])(fx, &change);
+    for (t = 0; t < 4; t++) {
+        void *s = sound(t);
+        dist_base[t][0] = get(&knobs[0], s);
+        dist_base[t][1] = get(&knobs[1], s);
+        dist_set[6 * t + 5] = dist_sld[1 + t] = get(&knobs[6], s);
+    }
 }
 
 /* How far a turn moves a setting (the image port's step_of). Dials take
  * the delta's whole steps (at least one); switches one per turn. Settings of
  * 3..16 positions step once per TURN turns, each counted as one plain step
- * whatever its speed, as stock's stepped parameters do (6 counts a step, no
- * acceleration); the count starts over on another knob or a change of
- * direction. */
+ * whatever its speed, as stock's stepped parameters do; the count starts
+ * over on another knob or a change of direction. */
 static int32_t step_of(int32_t delta, int32_t id, unsigned max)
 {
     static int32_t acc_id, acc;
@@ -225,15 +202,9 @@ static int32_t step_of(int32_t delta, int32_t id, unsigned max)
 static int dist_get(int32_t id, int32_t *value)
 {
     const struct knob *k = knob_of(id);
-    int32_t t = active_track();
-    void *kp = kit();
-    unsigned v;
     if (!k)
         return 0;
-    v = (t >= 0 && t < 4 && kp) ? get_setting(k, core_store_get(field(t), kp, 0)) : 0;
-    if (k->max == 2)
-        v = (v * 127 + 1) >> 1;     /* 0, 64, 127: AMP PAN's marker left, centre, right */
-    *value = (int32_t)v << 8;
+    *value = (int32_t)get(k, sound(active_track())) << 8;
     return 1;
 }
 
@@ -241,24 +212,19 @@ static int dist_delta(void *view, int32_t id, int32_t delta, int32_t func)
 {
     const struct knob *k = knob_of(id);
     int32_t t = active_track(), v;
-    void *kp = kit();
-    uint32_t w;
+    void *s = sound(t);
     (void)view;
     (void)func;
     if (!k)
         return 0;
-    if (t < 0 || t > 3 || !kp)
+    if (!s)
         return 1;
-    w = core_store_get(field(t), kp, 0);
-    v = (int32_t)get_setting(k, w) + step_of(delta, id, k->max);
-    if (v < 0)
-        v = 0;
-    if (v > k->max)
-        v = k->max;
-    w = put_setting(k, w, (unsigned)v);
-    core_store_set(field(t), kp, 0, w);
-    cache(t, w);
-    kit_notify();
+    v = (int32_t)get(k, s) + step_of(delta, id, k->max);
+    v = v < 0 ? 0 : v > k->max ? k->max : v;
+    core_store_set(field_of(id), s, 0, (unsigned)v);
+    if (id == ID_DIG && v && !core_store_get(STORE(dist_lev), s, 0))
+        core_store_set(STORE(dist_lev), s, 0, LEV_START);
+    cache_all();
     return 1;
 }
 
@@ -268,72 +234,72 @@ static void copy_name(char *buf, const char *s)
         ;
 }
 
-/* The text the knob draw shows while a knob turns: CHR its character's
- * name, the switches their own name (the graphic is the value), the dials
- * stock's numbers, formatted as AMP CHO's. */
+/* The value's text: CHR its character's name, the switches ON or OFF, the
+ * dials their number. A trig's lock is shown through here too. */
 static int dist_text(struct core_text *t)
 {
     const struct knob *k = knob_of(t->id);
+    unsigned v = ((unsigned)t->value >> 8) & 0xff;
     if (!k)
         return CORE_TEXT_PASS;
     if (k->max == 2) {
-        unsigned v = ((unsigned)t->value >> 8) & 0xff;
-        copy_name(t->buf, chr_names[v >= 96 ? 2 : v >= 32 ? 1 : 0]);
+        copy_name(t->buf, chr_names[v > 2 ? 2 : v]);
         return CORE_TEXT_DONE;
     }
     if (k->max == 1) {
-        copy_name(t->buf, t->value ? "ON" : "OFF");
+        copy_name(t->buf, v ? "ON" : "OFF");
         return CORE_TEXT_DONE;
     }
-    t->id = 94;
-    return CORE_TEXT_STOCK;
+    t->buf[0] = v >= 100 ? '0' + v / 100 : ' ';
+    t->buf[1] = v >= 10 ? '0' + v / 10 % 10 : ' ';
+    t->buf[2] = '0' + v % 10;
+    t->buf[3] = 0;
+    return CORE_TEXT_DONE;
 }
 
-const struct core_param dist_params = {38, 88, dist_get, dist_delta, dist_text};
+const struct core_param dist_params = {ID_DIG, ID_SLD, dist_get, dist_delta, dist_text};
 
-const struct core_page dist_page = {PAGE_DIST, "DIST (P 2/2)", {38, 39, 51, 52, 64, 65, 88}};
+const struct core_page dist_page = {PAGE_DIST, "DIST (P 2/2)",
+                                    {ID_DIG, ID_CHR, ID_DRV, ID_BIT, ID_SRR, ID_LEV, ID_SLD}};
 const struct core_page dist_amp_page = {PAGE_AMP, "AMP (P 1/2)", {89, 90, 91, 92, 93, 94, 95, 96, 97, 98}};
 const struct core_view_page dist_view_page = {CORE_TRACK_SYNTH, CORE_KEY_AMP, PAGE_DIST, 0};
 
-static const char *dist_name(int32_t id, int32_t long_name)
-{
-    const struct knob *k = knob_of(id);
-    return !k ? 0 : long_name ? k->long_name : k->name;
-}
-
-const struct ae_name dist_names = {38, 88, dist_name};
-
-/* dist.s's name gates: the first ae_names entry that names the id */
+/* dist.s's name gates: SLD's names, 0 for any other id */
 const char *dist_name_of(int32_t id, int32_t long_name)
 {
-    const struct ae_name *const *e;
-    for (e = ae_names; *e; e++)
-        if (id >= (*e)->first && id <= (*e)->last) {
-            const char *n = (*e)->name(id, long_name);
-            if (n)
-                return n;
+    return id != ID_SLD ? 0 : long_name ? "303 Slide" : "SLD";
+}
+
+/* each audio block, after core's snapshot (order 1): what each track plays */
+void dist_render(void)
+{
+    static int h[4];
+    int32_t t, v[4], i, l;
+    if (!h[0]) {
+        h[0] = core_param_handle(STORE(dist_drv));
+        h[1] = core_param_handle(STORE(dist_bit));
+        h[2] = core_param_handle(STORE(dist_srr));
+        h[3] = core_param_handle(STORE(dist_lev));
+    }
+    for (t = 0; t < 4; t++) {
+        unsigned char *d = &dist_set[6 * t];
+        l = core_lock_value(t, STORE(dist_dig));
+        d[0] = l >= 0 ? l : dist_base[t][0];
+        l = core_lock_value(t, STORE(dist_chr));
+        dist_set[24 + t] = l >= 0 ? (l > 2 ? 2 : l) : dist_base[t][1];
+        if (!d[0])
+            continue;                       /* off: the audio side reads nothing else */
+        core_param_values(t, h, 4, 0, v);
+        for (i = 0; i < 4; i++) {
+            int32_t x = v[i] == CORE_PARAM_NONE ? 0 : (v[i] + 128) >> 8;
+            d[1 + i] = x < 0 ? 0 : x > 127 ? 127 : x;
         }
-    return 0;
+    }
 }
 
 void dist_tick(void *ctrl)
 {
-    static int ready;
     (void)ctrl;
-    if (!ready) {
-        unsigned i, j;
-        ready = 1;
-        for (i = 0; i < NKNOBS; i++) {
-            uint32_t *r = (uint32_t *)(PARAM_INFO + PI_STRIDE * knobs[i].id);
-            const uint32_t *f = (const uint32_t *)(PARAM_INFO + PI_STRIDE * FEEL);
-            const uint32_t *d = (const uint32_t *)(PARAM_INFO + PI_STRIDE * knobs[i].donor);
-            r[0] = f[0] | LOCK_OFF;
-            for (j = 1; j < PI_STRIDE / 4; j++)     /* a dial's steps, feel and callbacks */
-                r[j] = f[j];
-            for (j = PI_DRAW / 4; j < PI_DRAW / 4 + 4; j++)
-                r[j] = d[j];                        /* and the donor's art */
-        }
-    }
     cache_all();
 }
 

@@ -1,11 +1,11 @@
 {
  "id": "wave",
- "version": "1.1",
+ "version": "2.0",
  "title": "WAVE",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
  "license": "MIT",
- "description": "Turns a synth track's noise generator into a digital oscillator at OSC1's pitch (note, tune, bend, slide, vibrato and LFOs included), or a chord of it. On the NOISE page, knob D picks OFF, WAV or CHD and knob F the chord (OCT 5TH MAJ MIN SU2 SU4 MA7 MI7 DO7 MI9 HDX, and the supersaws SW1 SW2). With WAV or CHD on, S&H becomes SHP (sine, triangle, saw, square, morphing), COL becomes FLD (a wavefolder) and FAD becomes FM (a sine at OSC2's pitch modulating the wave's phase); LEV stays the level. It plays through the noise path into the analog voice, so the filters, overdrive and VCA shape it. SHP, FLD, FM and LEV are the stock noise parameters, so locks and LFOs work on them; the mode and chord are kept with the sound, in core-a4's mod storage, and cannot be p-locked. Saw and square are not band-limited. Two sounding chord tracks are the comfortable maximum; a third slows the screen. Needs core-a4 0.2 and dist (its knob names). Port of AE-analog-four-mods 0010-wave-osc (Analog Four MK1).",
+ "description": "Turns a synth track's noise generator into a digital oscillator at OSC1's pitch (note, tune, bend, slide, vibrato and LFOs included), or a chord of it. On the NOISE page, knob D picks OFF, WAV or CHD and knob F the chord (OCT 5TH MAJ MIN SU2 SU4 MA7 MI7 DO7 MI9 HDX, and the supersaws SW1 SW2). With WAV or CHD on, S&H becomes SHP (sine, triangle, saw, square, morphing), COL becomes FLD (a wavefolder) and FAD becomes FM (a sine at OSC2's pitch modulating the wave's phase); LEV stays the level. It plays through the noise path into the analog voice, so the filters, overdrive and VCA shape it. SHP, FLD, FM and LEV are the stock noise parameters, so locks and LFOs work on them; the mode and chord are kept with the sound, in core-a4's mod storage, and can be p-locked (a trig plays its own mode or chord). The chord is also an LFO, envelope, route, macro and CONTROL IN destination with a CC: with no smoothing, LFOs, routes and Param Slide step through the chord list one whole chord at a time. The mode takes locks only. Saw and square are not band-limited. Two sounding chord tracks are the comfortable maximum; a third slows the screen. Needs core-a4 0.5. Cannot share a build with dist (both keep their settings in the sound's 32 bits, and both answer the knob-name getters). Port of AE-analog-four-mods 0010-wave-osc (Analog Four MK1).",
  "device": "analog-four-mk2",
  "os": "1.56",
  "sources": [
@@ -13,29 +13,31 @@
   "wave.c"
  ],
  "storage": [
-  {"sym": "wave_set", "scope": "sound", "bits": 6}
+  {"sym": "wave_mode", "scope": "sound", "bits": 2, "lock": true},
+  {"sym": "wave_chord", "scope": "sound", "bits": 4, "lock": true, "mod": true, "cc": true, "smooth": false}
  ],
  "sites": [
   {"addr": "0x400ffe04", "stock": "41f980002be8", "op": "jmp", "target": "wave_fad"},
-  {"addr": "0x400ffe50", "stock": "43f980005ba8", "op": "jmp", "target": "wave_mix"}
+  {"addr": "0x400ffe50", "stock": "43f980005ba8", "op": "jmp", "target": "wave_mix"},
+  {"addr": "0x4009e79e", "stock": "202f00080c8000000127", "op": "jmp", "target": "wave_sname"},
+  {"addr": "0x4009e7c2", "stock": "202f00080c8000000127", "op": "jmp", "target": "wave_lname"}
  ],
  "subscribe": [
   {"event": "ev_tick", "fn": "wave_tick", "order": 50},
-  {"event": "ev_project", "fn": "wave_project", "order": 50}
+  {"event": "ev_project", "fn": "wave_project", "order": 50},
+  {"event": "ev_render_out", "fn": "wave_render", "order": 50}
  ],
  "contribute": [
   {"to": "core_pages", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_noise_page", 0]]},
   {"to": "core_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_mode_params", 0]]},
   {"to": "core_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_chord_params", 0]]},
-  {"to": "ae_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_names_osc", 0]]},
-  {"to": "ae_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_names_mode", 0]]},
-  {"to": "ae_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_names_chord", 0]]}
+  {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_lp_mode", 0]]},
+  {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_lp_chord", 0]]}
  ],
  "resources": {
-  "core": "0.2"
+  "core": "0.5"
  },
  "requires": [
-  "core",
-  "dist"
+  "core"
  ]
 }
