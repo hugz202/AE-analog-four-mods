@@ -60,7 +60,16 @@ getters), so wave stands on its own.
 
 ## Status
 
-In rytm-emu's A4 build (24 Oct 2026), with dist, scale-lock, slide and analoghealth
+**2.0** (core-a4 0.5, build AW20 with scale-lock and slide, no dist; plans `t-aw20`): in
+rytm-emu's A4 build and on an Analog Four MKII (7 Nov 2026): the NOISE page (mode by its
+value, CHRD), a chord p-lock of OCT on trig 1 plays on that trig only (the oscillator's
+per-block setting reads OCT while it plays, the sound's MA7 otherwise); LFO1 with Dest A on
+WAVE:Wave Chord steps the played chord one whole chord at a time; KEY SCALE and the NOTE
+encoder as before; the settings come back after SAVE PROJECT AS and loading the project
+again. Not checked yet: the chords by ear under the LFO, the CC and NRPNs, mode locks,
+Param Slide on the chord.
+
+**1.x**: In rytm-emu's A4 build (24 Oct 2026), with dist, scale-lock, slide and analoghealth
 (plan check5-ae56, PASS): the NOISE page shows the two knobs, OFF / WAV / CHD and the
 chord names, SHP FLD FM while on, notes play with CHD on, and the setting came back
 after SAVE PROJECT AS and loading the project again.

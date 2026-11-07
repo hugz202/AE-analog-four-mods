@@ -68,7 +68,15 @@ they were kit fields, and 2.0's are sound fields.
 
 ## Status
 
-In rytm-emu's A4 build (24 Oct 2026), core-a4 0.2 with scale-lock, slide, wave and
+**2.0** (core-a4 0.5, build AD20 with scale-lock and slide; plans `t-ad20`): in rytm-emu's
+A4 build and on an Analog Four MKII (7 Nov 2026): the DIST page and every knob; a DRV
+p-lock of 0 on trig 1 plays on that trig only (the audio side's per-block values read
+0 while it plays, 127 otherwise); LFO1 with Dest A on DIST:Drive moves the played DRV
+(87..127 on the unit at depth -32); the DIST settings come back after SAVE PROJECT AS and
+loading the project again. Not checked yet: the sound by ear, CCs and NRPNs, the other
+destinations (routes, macros, CONTROL IN), locks on DIG, CHR, BIT, SRR and LEV.
+
+**1.0**: In rytm-emu's A4 build (24 Oct 2026), core-a4 0.2 with scale-lock, slide, wave and
 analoghealth (plan check5-ae56, PASS): AMP reads "AMP (P 1/2)", AMP again the DIST
 page with DIG CHR DRV BIT SRR / LEV SLD, every knob turns and draws, the long names
 show in the header; notes play with DIG on; the settings came back after a reboot,

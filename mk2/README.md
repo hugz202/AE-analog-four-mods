@@ -12,8 +12,8 @@ MK1's own copiers and page hooks (0006, most of 0008) have no counterpart here.
 |---|---|---|---|
 | [scale-lock](scale-lock/README.md) | 0001 | KEY SCALE with 35 scales; notes and the NOTE encoder kept in the scale | hardware |
 | [slide](slide/README.md) | 0002 | 303 slide: the slide trig on the note you glide from | hardware |
-| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 1.0 hardware; 2.0 emulator |
-| [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 1.1 hardware; 2.0 emulator |
+| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.0 hardware (screens and values; not yet by ear) |
+| [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.0 hardware (screens and values; not yet by ear) |
 
 0006 (kit FX persistence) is core-a4's mod storage here; dist and wave keep their
 settings there, in the sound (from 2.0), which is what lets core-a4 0.5 p-lock them.
