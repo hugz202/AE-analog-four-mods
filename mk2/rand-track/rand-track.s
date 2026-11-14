@@ -6,16 +6,12 @@
         | cleared (stock CLEAR TRACK) and filled over its length with a random
         | line. Hold the track key and press LEFT: the copy goes back.
         |
-        | One hook, in the panel key handler 0x400c8b90 (the MK1's 0x400c4348;
-        | d2 = the event, a2 = the view). Its first call reads the key code
-        | (`jsr key_code` at 0x400c8ba2, the event pushed): rnd_gate makes that
-        | call itself, and for YES or LEFT pressed while a track key is held
-        | (held_tracks: the mask stock's own TRACK + UP / DOWN transpose tests)
-        | runs rnd_action and leaves through the handler's own handled exit
-        | (`moveq #1,%d3`, then the epilogue, which restores from %fp). Anything
-        | else resumes stock with the key code in d0. In this handler YES (0x44)
+        | No site of its own: core-a4mk2 0.8's ev_track_key (TrackSelectionView's
+        | key virtual 0x400c8b90, before stock acts on a key) calls rnd_key, and
+        | for YES or LEFT pressed while a track key is held (core_track_held)
+        | rnd_key runs rnd_action and takes the key. In that handler YES (0x44)
         | and LEFT (0x40) fall to the default case, so stock gives TRACK + YES
-        | and TRACK + LEFT no meaning here.
+        | and TRACK + LEFT no meaning there.
         |
         | rnd_action works on the current track (the one the held key
         | selected), as stock's COPY / PASTE / CLEAR TRACK do:
@@ -40,27 +36,19 @@
         | trigs play the 303 way. No storage, no settings.
         |
         | The code is the MK1's (AE-analog-four-mods OS-1.56, mods/0011-rand-
-        | track); the differences: the addresses, the undo copy in this mod's
+        | track); the differences: the addresses, core's key event and view
+        | helpers in place of its own key hook, the undo copy in this mod's
         | .bss in place of free DDR, and one text section in place of caves.
         | Calls follow the stock ABI: d0/d1/a0/a1 are scratch.
 
-        | OS 1.56 MKII addresses, traced in the MKII image (MK1 in brackets)
-        .equ    key_code,              0x4005b6f0  | (0x40059948) event +12
-        .equ    key_is_press,          0x4005b75e  | (0x400599b6) event +16 bit 0
-        .equ    held_tracks,           0x40022014  | (0x40021d34) (view + 108)
-        .equ    key_resume,            0x400c8ba8  | (0x400c4360)
-        .equ    key_handled,           0x400c8f6a  | (0x400c4722) moveq #1,%d3
-        .equ    track_index_of,        0x400adbd2  | (0x400aab78)
-        .equ    current_track_pattern, 0x400a5f80  | (0x400a2fb8)
+        | OS 1.56 MKII addresses, traced in the MKII image (MK1 in brackets).
+        | The view, the held track keys, the current track and its TrackPattern
+        | and the pop-up come from core-a4mk2 0.8 (analog-four-mk2/ui.h).
         .equ    track_clear,           0x400b9666  | (0x400b6562)
         .equ    trig_flag_set,         0x400b71aa  | (0x400b40a6)
         .equ    step_lock_prep,        0x400b528e  | (0x400b218a)
         .equ    memcpy,                0x40077fa0  | (0x40075ab8)
         .equ    scale_table,           0x4019fadc  | (0x40181d80)
-        .equ    str_from_cstr2,        0x4014c84c  | (0x40131bfe)
-        .equ    str_convert,           0x4014c122  | (0x401314d4)
-        .equ    show_popup,            0x40061b5c  | (0x4005fcb8)
-        .equ    str_dtor,              0x40144764  | (0x40129b16)
         .equ    block_counter,         0x41864b1c  | (0x415c00b0) fx_block's first read
 
         .equ    KEY_YES,    0x44
@@ -87,59 +75,55 @@
         .equ    STEP_LOCKS, 228                   | per step
 
         .text
-        .globl  rnd_gate
+        .globl  rnd_key
 
         | ------------------------------------------------------------------
-        | The key handler's key-code read (`jsr key_code`, the event pushed).
+        | rnd_key(view, event, key, pressed) -> d0 nonzero: taken (ev_track_key)
         | ------------------------------------------------------------------
         .align  2
-rnd_gate:
-        jsr     key_code                          | displaced: d0 = the key
+rnd_key:
+        tst.l   16(%sp)                           | a press
+        beq.s   8f
+        move.l  12(%sp),%d0                       | YES or LEFT
         moveq   #KEY_YES,%d1
         cmp.l   %d1,%d0
         beq.s   1f
         moveq   #KEY_LEFT,%d1
         cmp.l   %d1,%d0
-        bne.s   9f
-1:      move.l  %d0,-(%sp)                        | the key
-        move.l  %d2,-(%sp)
-        jsr     key_is_press
-        addq.l  #4,%sp
-        tst.b   %d0
-        beq.s   8f
-        move.l  108(%a2),-(%sp)
-        jsr     held_tracks
+        bne.s   8f
+1:      move.l  4(%sp),-(%sp)                     | with a track key held
+        jsr     core_track_held
         addq.l  #4,%sp
         tst.l   %d0
         beq.s   8f
-        move.l  %a2,-(%sp)                        | rnd_action(view, key)
-        jsr     rnd_action
-        jmp     key_handled                       | (unlk drops what is pushed)
-8:      move.l  (%sp)+,%d0                        | not ours: the key back
-9:      jmp     key_resume
+        move.l  12(%sp),-(%sp)                    | rnd_action(view, key)
+        move.l  8(%sp),-(%sp)
+        bsr.w   rnd_action
+        addq.l  #8,%sp
+        moveq   #1,%d0
+        rts
+8:      moveq   #0,%d0
+        rts
 
         | ------------------------------------------------------------------
         | rnd_action(view, key)
         | ------------------------------------------------------------------
         .align  2
 rnd_action:
-        link    %fp,#-28
+        link    %fp,#0
         lea     -40(%sp),%sp
         movem.l %d2-%d7/%a2-%a5,(%sp)
         move.l  8(%fp),%a2                        | the view
-        move.l  104(%a2),%a0
-        pea     48(%a0)
-        jsr     track_index_of
+        move.l  %a2,-(%sp)
+        jsr     core_track_current
         addq.l  #4,%sp
-        move.l  %d0,%d7                           | t
+        move.l  %d0,%d7                           | t, 0..5 or -1
+        bmi.w   rnd_exit
         moveq   #4,%d1                            | the FX track: nothing
         cmp.l   %d1,%d0
         beq.w   rnd_exit
-        moveq   #5,%d1
-        cmp.l   %d1,%d0
-        bhi.w   rnd_exit
-        move.l  104(%a2),-(%sp)
-        jsr     current_track_pattern
+        move.l  %a2,-(%sp)
+        jsr     core_track_pattern
         addq.l  #4,%sp
         move.l  %d0,%a3                           | tp
         tst.l   %d0
@@ -272,30 +256,13 @@ set_flag:
         lea     16(%sp),%sp
         rts
 
-        | rnd_popup(a0 = the text): the view in a2, inside rnd_action's frame
-        | (fp - 4 .. - 16 free, as stock's).
+        | rnd_popup(a0 = the text): core_popup(view, text), the view in a2.
         .align  2
 rnd_popup:
-        move.l  %a3,-(%sp)
-        lea     -8(%fp),%a3
         move.l  %a0,-(%sp)
-        move.l  %a3,%a0
-        jsr     str_from_cstr2
-        move.l  %a3,-(%sp)
-        lea     -16(%fp),%a3
-        move.l  %a3,-(%sp)
-        jsr     str_convert
-        clr.l   -(%sp)
-        move.l  %a3,-(%sp)
         move.l  %a2,-(%sp)
-        jsr     show_popup
-        pea     -12(%fp)
-        lea     str_dtor,%a3
-        jsr     (%a3)
-        pea     -4(%fp)
-        jsr     (%a3)
-        lea     32(%sp),%sp
-        move.l  (%sp)+,%a3
+        jsr     core_popup
+        addq.l  #8,%sp
         rts
 
         | pick_note(a5 = the scale row, d4 = the root note) -> d0 = a MIDI note
