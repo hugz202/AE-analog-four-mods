@@ -13,7 +13,7 @@ MK1's own copiers and page hooks (0006, most of 0008) have no counterpart here.
 |---|---|---|---|
 | [scale-lock](scale-lock/README.md) | 0001 | KEY SCALE with 35 scales; notes and the NOTE encoder kept in the scale | 1.0 hardware; 1.1 on core 0.7 not yet run |
 | [slide](slide/README.md) | 0002 | 303 slide: the slide trig on the note you glide from | 1.0 hardware; 1.1 on core 0.7 not yet run |
-| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run |
+| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run; 2.2 (the MK1's 75 Hz low-cut before the drive, sends follow LEV) not yet run |
 | [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run |
 | [rand-track](rand-track/README.md) | 0011 | hold a track key + YES: a random line in KEY NOTE + KEY SCALE with accents and slides; + LEFT undoes it | 1.2 on core-a4mk2 0.8 (its ev_track_key, ev_project, ev_pattern); emulator-gated, not yet on a unit |
 
@@ -32,7 +32,7 @@ python3 -m elekloader.sdk.build mods/core-a4mk2 --stock Analog-Four_MKII_OS1.56.
 python3 -m elekloader.sdk.build mk2/dist --stock Analog-Four_MKII_OS1.56.syx
 python3 -m elekloader.patch --stock Analog-Four_MKII_OS1.56.syx \
   --mod mods/core-a4mk2/out/core-0.7.elemod \
-  --mod mk2/dist/out/dist-2.1.elemod \
+  --mod mk2/dist/out/dist-2.2.elemod \
   --out a4-ae.syx --version AD21 --lockfile a4-ae.lock.json
 ```
 

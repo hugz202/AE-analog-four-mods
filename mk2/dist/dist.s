@@ -95,7 +95,10 @@ dist_dry:
         |          +9.5 dB, so a voice below the clip keeps its level as DRV
         |          rises, and a driven one comes out near a clean voice's peak
         |   rate   hold y for 1 + SRR / 4 samples
-        | The slot gets y << 8 back (same scale as the clean voice).
+        | Ahead of all of it a fixed 12 dB/oct high-pass, -6 dB at 75 Hz (hp2,
+        | from 2.2), so the low end doesn't swamp the drive. The slot gets
+        | y << 8 back, scaled by LEV as the dry output is (from 2.2; 2.1 and
+        | before trimmed it by 256 - DRV), so the sends follow LEV.
         |
         | CHR picks the drive's character (0 HARD, 1 RAT, 2 OD). RAT and OD add
         | one-pole filters, run in z = x >> 5 with Q11 coefficients
@@ -116,7 +119,7 @@ dist_dry:
         | Per-track DSP state in dist_hold, a REC-byte record per track (a5
         | steps by REC), copied to the stack around the track's sample loop:
         .equ    FS,         4
-        .equ    REC,        14*FS
+        .equ    REC,        16*FS
         .equ    HV,         0*FS                  | the held sample
         .equ    CNT,        1*FS                  | the hold count
         .equ    MAKEUP,     2*FS                  | makeup, Q8
@@ -131,7 +134,9 @@ dist_dry:
         .equ    ESH,        11*FS                 | emphasis: hp >> ESH
         .equ    LTYPE,      12*FS                 | TYPE | STATE_TAG the states are for
         .equ    STATE_TAG,  0x5a5a00
-        .equ    SENDK,      13*FS                 | send trim, Q8
+        .equ    SENDK,      13*FS                 | the sends' gain, Q8 (from LEV)
+        .equ    H1,         14*FS                 | the input HP's two states (hp2)
+        .equ    H2,         15*FS
         .align  2
 dist_fxin:
         lea     -140(%sp),%sp                     | displaced
@@ -232,10 +237,7 @@ dist_fxin:
 10:     move.l  %d5,%d0
         divu.l  %d1,%d0
         move.l  %d0,MAKEUP(%a5)
-        mvz.b   F_DRV(%a2),%d0                    | send trim, Q8: 256 - DRV
-        neg.l   %d0                               | (DRV 64 -2.5 dB, 127 -6 dB):
-        addi.l  #256,%d0                          | a clipped voice is denser than
-        move.l  %d0,SENDK(%a5)                    | a clean one at the same peak
+        jsr     hp_set                            | SENDK, the HP's states
         moveq   #-1,%d4                           | BIT 0: mask -1, half 0
         sub.l   %a6,%a6
         mvz.b   F_BIT(%a2),%d0
@@ -257,6 +259,7 @@ dist_fxin:
 
 2:      move.l  (%a0),%d0                         | x
         asr.l   #8,%d0
+        jsr     hp2                               | the input HP
         tst.l   TYPE(%a5)                         | RAT/OD: emphasis and pre-clip LP
         beq.s   20f
         asr.l   #5,%d0                            | z
@@ -332,7 +335,7 @@ dist_fxin:
 5:      move.l  %d1,CNT(%a5)
         move.l  HV(%a5),%d0
         move.l  %d0,(%a1)+                        | for dist_fxout
-        muls.l  SENDK(%a5),%d0                    | << 8 back to slot scale, trimmed
+        muls.l  SENDK(%a5),%d0                    | << 8 back to slot scale, x LEV
         move.l  %d0,(%a0)                         | for the sends
         lea     FRAME_SIZE(%a0),%a0
         subq.l  #1,%d2
@@ -353,6 +356,62 @@ dist_fxin:
         subq.l  #1,%d7
         bne.w   1b
         jmp     fx_block_body
+
+        | ------------------------------------------------------------------
+        | The input HP, ahead of everything on the digital path (the drive is
+        | otherwise most sensitive to an acid line's low end): two one-pole
+        | high-passes in x, lp += (x - lp) * 5 / 512, hp = x - lp, each 75 Hz
+        | (-ln(1 - 5/512) x 48 kHz / 2 pi): 12 dB/oct, -6 dB at 75 Hz, the
+        | model of filter 2 in HP2 at RES 0 (k = 2: two equal poles) at FRQ
+        | ~32. Shifts and adds only, no multiply to wrap: d0 = x in and out,
+        | d1 and d5 clobbered (free at the sample loop's top). From the MK1's
+        | OS-1.56 0007 (2026-10-26).
+        | ------------------------------------------------------------------
+        .align  2
+hp2:    move.l  %d0,%d5
+        sub.l   H1(%a5),%d5                       | x - lp1
+        move.l  %d5,%d1
+        asr.l   #7,%d5
+        asr.l   #8,%d1
+        asr.l   #1,%d1
+        add.l   %d1,%d5                           | (x - lp1) * 5 / 512
+        add.l   H1(%a5),%d5
+        move.l  %d5,H1(%a5)
+        sub.l   %d5,%d0                           | hp1
+        move.l  %d0,%d5
+        sub.l   H2(%a5),%d5
+        move.l  %d5,%d1
+        asr.l   #7,%d5
+        asr.l   #8,%d1
+        asr.l   #1,%d1
+        add.l   %d1,%d5
+        add.l   H2(%a5),%d5
+        move.l  %d5,H2(%a5)
+        sub.l   %d5,%d0                           | hp2
+        rts
+
+        | Per block, from dist_fxin: the sends follow LEV as the dry output
+        | does (Q8, LEV x 2.5, so LEV 100, the analog path's level, is about
+        | unity, as the slot was clean); then the HP's states, cleared when out
+        | of +-2^24 (dist_hold is never cleared; a real state stays under
+        | 2^23). LEV is plain 0..127 in dist_set (the MK1 kept it XOR 64).
+        | a0, d0, d1 free.
+        .align  2
+hp_set: mvz.b   F_LEV(%a2),%d0
+        mulu.w  #10,%d0
+        lsr.l   #2,%d0
+        move.l  %d0,SENDK(%a5)
+        lea     H1(%a5),%a0
+        moveq   #2,%d1
+1:      move.l  (%a0),%d0
+        addi.l  #0x1000000,%d0
+        cmpi.l  #0x2000000,%d0
+        bcs.s   2f
+        clr.l   (%a0)
+2:      addq.l  #4,%a0
+        subq.l  #1,%d1
+        bne.s   1b
+        rts
 
         | ------------------------------------------------------------------
         | fx_block, after its output loop (a4 just past the 32 output pairs):
