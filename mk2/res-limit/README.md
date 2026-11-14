@@ -19,6 +19,15 @@ So the setting is per synth track and kept with the kit, and it combines with di
 word 103) it does not follow a sound into the sound pool or a copy, and it takes no
 locks. The FX and CV tracks show no checkbox.
 
+## 1.1: on core-a4mk2 0.8's events
+
+1.1 needs core-a4mk2 0.8 and has no sites of its own. The scaling runs in core's
+`ev_voice_params` (at 0x40103af6, the same point as 1.0's site), with `VP_F1_RES` /
+`VP_F2_RES`. The row comes from core's `ev_sound_setup` and
+`core_sound_setup_toggle` (at 0x400e62c8, after BOOST's row). The storage, the
+scaling and the menu row are the same as 1.0's. 1.0 (res-limit.s, core 0.7) is
+in git history.
+
 ## What changed from the MK1
 
 - **The addresses**, traced in the MKII 1.56 image in Ghidra (MK1 in brackets in
