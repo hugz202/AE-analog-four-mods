@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* dist - the DIST page (AE 0008) and the digital path's settings (AE 0007)
- * for the Analog Four MKII, OS 1.56, on core-a4 0.5. dist.s is the audio
+ * for the Analog Four MKII, OS 1.56, on core-a4mk2 0.7 (written for core-a4 0.5). dist.s is the audio
  * side; this is the page and the settings.
  *
  * On a synth track, AMP pressed twice: the DIST page (page 50), after stock's

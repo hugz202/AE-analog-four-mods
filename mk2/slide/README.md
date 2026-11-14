@@ -21,5 +21,10 @@ page, kept with the sound (dist 2.0; with the kit before). Without dist, every s
 
 ## Status
 
+**1.1** (core-a4mk2 0.7, build AD21 and AW21): the same code as 1.0, built and linked with
+core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
+storage layout, lock codes and CCs are unchanged and projects saved by the earlier
+build keep their settings. Not yet run in the emulator or on a unit.
+
 In rytm-emu's A4 build (24 Oct 2026), with dist, scale-lock and wave: a pattern
 played with SLD on for track 1 and no fault. On an Analog Four MKII (24 Oct 2026): the slide heard working.

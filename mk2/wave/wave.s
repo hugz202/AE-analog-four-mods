@@ -1,6 +1,7 @@
         | SPDX-License-Identifier: MIT
         | wave - AE 0010 (digital wave / chord oscillator) for the Analog Four
-        | MKII, OS 1.56, as an elekloader elemod on core-a4 0.5. This file is
+        | MKII, OS 1.56, as an elekloader elemod on core-a4mk2 0.7
+        | (written for core-a4 0.5). This file is
         | the audio side and the knob-name gates; wave.c is the NOISE page's
         | two knobs.
         |

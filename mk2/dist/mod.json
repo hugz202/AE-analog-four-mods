@@ -1,11 +1,11 @@
 {
  "id": "dist",
- "version": "2.0",
+ "version": "2.1",
  "title": "DIST",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
  "license": "MIT",
- "description": "A digital path with distortion for each synth track, on a DIST page: on a synth track press AMP a second time. DIG swaps the track's analog dry sound for the A4's own digitised copy of it and processes that instead. CHR picks the drive's character (HARD, a digital clipper; RAT, a treble lift, an op-amp roll-off, hard clip and a 4 kHz tone; OD, a 720 Hz mid hump, soft clip and 2.5 kHz), DRV the drive (more grit at about the same level), BIT the bit reduction, SRR the sample-rate reduction and LEV the processed signal's level (about 100 is level with the analog path). The processed signal also feeds the delay, reverb and chorus. SLD is slide's 303 mode for the track. The settings are kept with the sound, in core-a4's mod storage (all 32 bits of a sound's room, so wave cannot be in the same build). DIG, CHR, DRV, BIT, SRR and LEV can be p-locked; DRV, BIT, SRR and LEV are also LFO, envelope, route, macro and CONTROL IN destinations and have a CC and an NRPN each (DIG and CHR an NRPN). Needs core-a4 0.5. Port of AE-analog-four-mods 0007-digital-path and 0008-pages (Analog Four MK1).",
+ "description": "A digital path with distortion for each synth track, on a DIST page: on a synth track press AMP a second time. DIG swaps the track's analog dry sound for the A4's own digitised copy of it and processes that instead. CHR picks the drive's character (HARD, a digital clipper; RAT, a treble lift, an op-amp roll-off, hard clip and a 4 kHz tone; OD, a 720 Hz mid hump, soft clip and 2.5 kHz), DRV the drive (more grit at about the same level), BIT the bit reduction, SRR the sample-rate reduction and LEV the processed signal's level (about 100 is level with the analog path). The processed signal also feeds the delay, reverb and chorus. SLD is slide's 303 mode for the track. The settings are kept with the sound, in core-a4mk2's mod storage (all 32 bits of a sound's room, so wave cannot be in the same build). DIG, CHR, DRV, BIT, SRR and LEV can be p-locked; DRV, BIT, SRR and LEV are also LFO, envelope, route, macro and CONTROL IN destinations and have a CC and an NRPN each (DIG and CHR an NRPN). Needs core-a4mk2 0.7. Port of AE-analog-four-mods 0007-digital-path and 0008-pages (Analog Four MK1).",
  "device": "analog-four-mk2",
  "os": "1.56",
  "sources": [
@@ -46,7 +46,7 @@
   {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_lp_lev", 0]]}
  ],
  "resources": {
-  "core": "0.5"
+  "core": "0.7"
  },
  "requires": [
   "core"

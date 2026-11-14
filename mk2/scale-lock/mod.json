@@ -1,11 +1,11 @@
 {
  "id": "scale-lock",
- "version": "1.0",
+ "version": "1.1",
  "title": "SCALE LOCK",
  "category": "Sequencer",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
  "license": "MIT",
- "description": "NOTE SETUP's KEY SCALE grows from OFF/MAJ/MIN to OFF and 35 scales (MAJ, MIN, DOR, PHRY, LYD, MIXO, LOCR, then the rest of the firmware's own scale library). Anything but OFF locks the track to KEY NOTE and KEY SCALE: notes played on the trig keys, and everything that records them, snap to the nearest note in the scale, and the TRIG page NOTE encoder steps from one note in the scale to the next, on the track's note and on held trigs' locks. MAJ and MIN restrict too. The setting is saved with the pattern; a pattern with a new scale opened on stock reads KEY SCALE OFF. Needs core-a4 0.2, whose parameter routines it reaches one step in. Port of AE-analog-four-mods 0001-scale-lock (Analog Four MK1).",
+ "description": "NOTE SETUP's KEY SCALE grows from OFF/MAJ/MIN to OFF and 35 scales (MAJ, MIN, DOR, PHRY, LYD, MIXO, LOCR, then the rest of the firmware's own scale library). Anything but OFF locks the track to KEY NOTE and KEY SCALE: notes played on the trig keys, and everything that records them, snap to the nearest note in the scale, and the TRIG page NOTE encoder steps from one note in the scale to the next, on the track's note and on held trigs' locks. MAJ and MIN restrict too. The setting is saved with the pattern; a pattern with a new scale opened on stock reads KEY SCALE OFF. Needs core-a4mk2 0.7, whose parameter routines it reaches one step in. Port of AE-analog-four-mods 0001-scale-lock (Analog Four MK1).",
  "device": "analog-four-mk2",
  "os": "1.56",
  "sources": [
@@ -25,7 +25,7 @@
   {"addr": "0x40079f42", "stock": "6618", "op": "bytes", "new": "660c", "kind": "code"}
  ],
  "resources": {
-  "core": "0.2"
+  "core": "0.7"
  },
  "requires": [
   "core"

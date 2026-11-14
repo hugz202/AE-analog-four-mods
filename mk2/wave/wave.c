@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /* wave - the NOISE page's oscillator knobs (AE 0010) for the Analog Four
- * MKII, OS 1.56, on core-a4 0.5. wave.s is the oscillator and the name gates.
+ * MKII, OS 1.56, on core-a4mk2 0.7 (written for core-a4 0.5). wave.s is the oscillator and the name gates.
  *
  * The NOISE page (page 7) is answered through core_pages with two more
  * knobs: D, the mode (OFF / WAV / CHD), and F, the chord (OCT 5TH MAJ MIN SU2

@@ -32,6 +32,11 @@ the pattern; a pattern with a new scale opened on stock reads KEY SCALE OFF.
 
 ## Status
 
+**1.1** (core-a4mk2 0.7, build AD21 and AW21): the same code as 1.0, built and linked with
+core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
+storage layout, lock codes and CCs are unchanged and projects saved by the earlier
+build keep their settings. Not yet run in the emulator or on a unit.
+
 In rytm-emu's A4 build (24 Oct 2026), core-a4 0.2 with dist, slide, wave and
 analoghealth: KEY SCALE steps OFF, MAJ, MIN, DOR ... and stops at LO37 with each
 name shown; with MAJ on C, the NOTE encoder went C6, F6, B6 (in the scale, several

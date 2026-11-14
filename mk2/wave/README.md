@@ -60,6 +60,11 @@ getters), so wave stands on its own.
 
 ## Status
 
+**2.1** (core-a4mk2 0.7, build AW21 with scale-lock and slide): the same code as 2.0, built and linked with
+core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
+storage layout, lock codes and CCs are unchanged and projects saved by the earlier
+build keep their settings. Not yet run in the emulator or on a unit.
+
 **2.0** (core-a4 0.5, build AW20 with scale-lock and slide, no dist; plans `t-aw20`): in
 rytm-emu's A4 build and on an Analog Four MKII (7 Nov 2026): the NOISE page (mode by its
 value, CHRD), a chord p-lock of OCT on trig 1 plays on that trig only (the oscillator's

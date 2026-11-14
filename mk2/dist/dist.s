@@ -1,6 +1,7 @@
         | SPDX-License-Identifier: MIT
         | dist - AE 0007 (digital path) and 0008 (the DIST page) for the Analog
-        | Four MKII, OS 1.56, as an elekloader elemod on core-a4 0.5. This file
+        | Four MKII, OS 1.56, as an elekloader elemod on core-a4mk2 0.7
+        | (written for core-a4 0.5). This file
         | is the audio side and SLD's knob-name gate; dist.c is the page.
         |
         | Per synth track, on the DIST page (press AMP twice): DIG puts the track

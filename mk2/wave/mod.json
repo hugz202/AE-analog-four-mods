@@ -1,11 +1,11 @@
 {
  "id": "wave",
- "version": "2.0",
+ "version": "2.1",
  "title": "WAVE",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
  "license": "MIT",
- "description": "Turns a synth track's noise generator into a digital oscillator at OSC1's pitch (note, tune, bend, slide, vibrato and LFOs included), or a chord of it. On the NOISE page, knob D picks OFF, WAV or CHD and knob F the chord (OCT 5TH MAJ MIN SU2 SU4 MA7 MI7 DO7 MI9 HDX, and the supersaws SW1 SW2). With WAV or CHD on, S&H becomes SHP (sine, triangle, saw, square, morphing), COL becomes FLD (a wavefolder) and FAD becomes FM (a sine at OSC2's pitch modulating the wave's phase); LEV stays the level. It plays through the noise path into the analog voice, so the filters, overdrive and VCA shape it. SHP, FLD, FM and LEV are the stock noise parameters, so locks and LFOs work on them; the mode and chord are kept with the sound, in core-a4's mod storage, and can be p-locked (a trig plays its own mode or chord). The chord is also an LFO, envelope, route, macro and CONTROL IN destination with a CC: with no smoothing, LFOs, routes and Param Slide step through the chord list one whole chord at a time. The mode takes locks only. Saw and square are not band-limited. Two sounding chord tracks are the comfortable maximum; a third slows the screen. Needs core-a4 0.5. Cannot share a build with dist (both keep their settings in the sound's 32 bits, and both answer the knob-name getters). Port of AE-analog-four-mods 0010-wave-osc (Analog Four MK1).",
+ "description": "Turns a synth track's noise generator into a digital oscillator at OSC1's pitch (note, tune, bend, slide, vibrato and LFOs included), or a chord of it. On the NOISE page, knob D picks OFF, WAV or CHD and knob F the chord (OCT 5TH MAJ MIN SU2 SU4 MA7 MI7 DO7 MI9 HDX, and the supersaws SW1 SW2). With WAV or CHD on, S&H becomes SHP (sine, triangle, saw, square, morphing), COL becomes FLD (a wavefolder) and FAD becomes FM (a sine at OSC2's pitch modulating the wave's phase); LEV stays the level. It plays through the noise path into the analog voice, so the filters, overdrive and VCA shape it. SHP, FLD, FM and LEV are the stock noise parameters, so locks and LFOs work on them; the mode and chord are kept with the sound, in core-a4mk2's mod storage, and can be p-locked (a trig plays its own mode or chord). The chord is also an LFO, envelope, route, macro and CONTROL IN destination with a CC: with no smoothing, LFOs, routes and Param Slide step through the chord list one whole chord at a time. The mode takes locks only. Saw and square are not band-limited. Two sounding chord tracks are the comfortable maximum; a third slows the screen. Needs core-a4mk2 0.7. Cannot share a build with dist (both keep their settings in the sound's 32 bits, and both answer the knob-name getters). Port of AE-analog-four-mods 0010-wave-osc (Analog Four MK1).",
  "device": "analog-four-mk2",
  "os": "1.56",
  "sources": [
@@ -35,7 +35,7 @@
   {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_lp_chord", 0]]}
  ],
  "resources": {
-  "core": "0.5"
+  "core": "0.7"
  },
  "requires": [
   "core"

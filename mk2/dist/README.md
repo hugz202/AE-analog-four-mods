@@ -30,8 +30,10 @@ build's lockfile. DIG and CHR are switches: they take locks (and an NRPN) only, 
 jump at the trig with no smoothing, Param Slide or modulation. SLD is slide's
 per-track mode, read by the sequencer, so it has no lock.
 
-A sound with no dist data reads 0 in every setting (core-a4 keeps no field init), so
-LEV starts at 0: switching DIG on with LEV at 0 sets LEV to 100.
+A sound with no dist data reads 0 in every setting, so LEV starts at 0: switching DIG on
+with LEV at 0 sets LEV to 100. (core-a4mk2 0.6 added field inits, but an init on LEV
+would XOR every saved LEV with it, so sounds saved by 2.0 would load with other levels;
+2.1 keeps 2.0's layout.)
 
 **dist and wave cannot share a build** from 2.0: dist takes all 32 bits of a sound's
 room and both answer the knob-name getters. The patcher refuses the pair (the
@@ -67,6 +69,11 @@ they were kit fields, and 2.0's are sound fields.
 - **Encoder steps** for CHR keep the image port's three turns a position.
 
 ## Status
+
+**2.1** (core-a4mk2 0.7, build AD21 with scale-lock and slide): the same code as 2.0, built and linked with
+core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
+storage layout, lock codes and CCs are unchanged and projects saved by the earlier
+build keep their settings. Not yet run in the emulator or on a unit.
 
 **2.0** (core-a4 0.5, build AD20 with scale-lock and slide; plans `t-ad20`): in rytm-emu's
 A4 build and on an Analog Four MKII (7 Nov 2026): the DIST page and every knob; a DRV
