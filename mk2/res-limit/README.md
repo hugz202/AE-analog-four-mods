@@ -61,8 +61,21 @@ Built and linked in the cloud with core-a4mk2 0.7 (sha256 `03d8677a…`) against
 AD21 and AW21 lockfiles: ADR1 (core, dist 2.1, scale-lock 1.1, slide 1.1, res-limit
 1.0) and AWR1 (the same with wave 2.1). The lockfiles gained only `res_lim`.
 
+## Emulator gate (1.1, 14 Nov 2026)
+
+Gated in the A4 emulator (elkbench, PC) as R8L2, sha256 `00eb89e8…`: core-a4mk2 0.8
+at 97a5ff0 (`dcfc8735…`), dist 2.1, scale-lock 1.1, slide 1.1, res-limit 1.1
+(`b9d13afb…`) and the analoghealth 1.2 harness. Lockfile: AD21's plus `res_lim` at
+kit bits 0..3. Both flashes passed (over stock 1.56 and back). Plan t-r8l2 passed
+from the fresh, dirty and testslot-cleared starts. Voice 0 read:
+- F1 and F2 RES 0x7f00 with the limit off
+- 0x5000 and 0x4000 with it on, stopped and playing
+- the limit on and F1 RES 0x5000 after a save and reload
+- 0x7f00 again with it off
+The checkbox redraws on YES.
+
 ## Not checked
 
-- Anything in the emulator or on a unit. The RES words are read from the code
-  [Ghidra]; the gate's first job is to show that the switch scales F1 and F2 RES.
+- A unit run. In the emulator, only T1 (voice 0) was read, and the wave build (AW +
+  res-limit) was not gated.
 - The sound by ear (a draft until the owner's listening check).
