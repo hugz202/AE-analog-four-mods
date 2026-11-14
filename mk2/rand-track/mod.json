@@ -1,0 +1,23 @@
+{
+ "id": "rand-track",
+ "version": "1.0",
+ "title": "RANDOM TRACK",
+ "category": "Sequencer",
+ "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
+ "license": "MIT",
+ "description": "Hold a track key and press YES: the track is cleared (stock CLEAR TRACK, after a copy is kept) and filled over its length with a random line: trigs on about 62 % of the steps (the first always), notes in KEY NOTE + KEY SCALE (pentatonic minor when KEY SCALE is OFF) around the track's default note, about a quarter of them accented and a sixth slid. Press it again for another. Hold the track key and press LEFT: the track comes back as it was before the last random line, p-locks included. The FX track is left alone. No settings. With scale-lock, every KEY SCALE scale is used; with slide, the slides play the 303 way. Needs core-a4mk2 0.7. Port of AE-analog-four-mods 0011-rand-track (Analog Four MK1).",
+ "device": "analog-four-mk2",
+ "os": "1.56",
+ "sources": [
+  "rand-track.s"
+ ],
+ "sites": [
+  {"addr": "0x400c8ba2", "stock": "4eb94005b6f0", "op": "jmp", "target": "rnd_gate"}
+ ],
+ "resources": {
+  "core": "0.7"
+ },
+ "requires": [
+  "core"
+ ]
+}
