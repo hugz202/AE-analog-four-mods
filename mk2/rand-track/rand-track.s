@@ -73,8 +73,6 @@
         .equ    MAGIC,      0x52414e44            | "RAND"
         .equ    LOCK_BYTES, 14704                 | a track's lock area (stock: 0x3970)
         .equ    STEP_LOCKS, 228                   | per step
-        .equ    FINE_FLAGS, 64*STEP_LOCKS         | after the steps: 112 fine flags
-        .equ    FINE_BYTES, 112                   | one per lockable parameter
 
         .text
         .globl  rnd_key
@@ -415,9 +413,7 @@ snap_take:
         | snap_restore(a3 = tp) -> d0 = 1 if the copy was this track's and is
         | back: the data, then per step stock's lock helper and that step's
         | locks, then the two notifications - stock UNDO CLEAR's sequence
-        | (0x400b8656). Unlike stock, the 112 fine-resolution flags after the
-        | steps (+0x3900, one per lockable parameter; stock's clear zeroes them
-        | and its undo never puts them back) are restored as well.
+        | (0x400b8656).
         .align  2
 snap_restore:
         move.l  snap_magic,%d0
@@ -456,13 +452,6 @@ snap_restore:
         moveq   #64,%d0
         cmp.l   %d0,%d2
         bne.s   1b
-        pea     FINE_BYTES                        | the fine flags too (stock's
-        pea     snap_lock+FINE_FLAGS              | undo leaves them cleared, so
-        move.l  %d3,%d0                           | a lock's fine part would be
-        addi.l  #FINE_FLAGS,%d0                   | dropped at the next save)
-        move.l  %d0,-(%sp)
-        jsr     memcpy
-        lea     12(%sp),%sp
 6:      move.l  (%a3),%a0                         | the notifications
         clr.l   -(%sp)
         move.l  %a3,-(%sp)

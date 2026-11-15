@@ -11,9 +11,10 @@ Random track, AE 0011, ported to the MKII as an elemod.
   for another. A pop-up reads RANDOM TRACK.
 - **Hold the track key and press LEFT:** the track comes back as it was before the
   last random line, p-locks included (restored as stock's UNDO CLEAR restores its own
-  copy, plus the track's 112 fine-resolution flags, which stock's undo leaves cleared
-  so that a lock's fine part is lost at the next save). A pop-up reads RANDOM UNDONE.
-  Only the last track randomized has a copy.
+  copy). A pop-up reads RANDOM UNDONE. Only the last track randomized has a copy.
+  As with stock's CLEAR TRACK + UNDO, the track's fine-resolution lock flags are not
+  restored, so a restored lock's fine part is dropped at the next save (kept as stock,
+  decided 2026-11-15).
 - The FX track is left alone. The CV track takes notes like a synth track. No settings,
   no storage.
 
@@ -46,15 +47,14 @@ No lock codes, destinations, storage, CCs, NRPNs, pages or settings.
 
 ## Status
 
-**1.2** (core-a4mk2 0.8, not final yet): the undo also restores the lock area's 112
-fine-resolution flags (+0x3900, one per lockable parameter). Stock's CLEAR TRACK zeroes
-them and its UNDO CLEAR copies back only the 64 step blocks, so after 1.1's undo a lock
-with a fine part kept playing at its full value but was cut to its coarse part at the
-next save, trig copy/paste or sound-from-locks (traced in Ghidra, 2026-11-15). Found by
-the emulator gate's p-lock check.
+**1.1** (core-a4mk2 0.8, not final yet): builds; lints against core 0.8; links in
+AD23 (core 0.8 + dist + scale-lock + slide + rand-track) and AW23 (core 0.8 + wave +
+scale-lock + slide + rand-track) with the AD21 / AW21 lockfiles, storage unchanged.
+Emulator-gated on core 0.8 at 97a5ff0 (AD24 / AW24, 14-15 Nov 2026); not yet run on
+a unit. 1.0 (its own key-handler site, core 0.7) was built and linked only, and is
+replaced by 1.1.
 
-**1.1** passed the emulator gate on core 0.8 at 97a5ff0 (AD24 / AW24, 14-15 Nov 2026):
-both pop-ups on the screen after loading a project and on the OSC1 and FLTR pages, the
-undo after a further edit, the FX track, per-track length, a scale-lock scale, and the
-GLOBAL / KIT menus taking YES / LEFT. Not yet run on a unit. 1.0 (its own key-handler
-site, core 0.7) is replaced.
+Worth checking in the emulator gate: YES and LEFT with a track key held on the main
+screen and on a parameter page (another view could take them first); the pop-ups;
+the undo after a random line and after a further edit; a track in per-track length
+mode; the FX track (nothing happens); a scale-lock scale above MIN.
