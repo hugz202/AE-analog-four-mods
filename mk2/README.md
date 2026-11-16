@@ -15,7 +15,7 @@ MK1's own copiers and page hooks (0006, most of 0008) have no counterpart here.
 | [slide](slide/README.md) | 0002 | 303 slide: the slide trig on the note you glide from | 1.0 hardware; 1.1 on core 0.7 not yet run |
 | [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run |
 | [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run |
-| [rand-track](rand-track/README.md) | 0011 | hold a track key + YES: a random line in KEY NOTE + KEY SCALE with accents and slides; + LEFT undoes it | 1.1 built on core-a4mk2 0.8 (its ev_track_key; core 0.8 not final); not yet run |
+| [rand-track](rand-track/README.md) | 0011 | hold a track key + YES: a random line in KEY NOTE + KEY SCALE with accents and slides; + LEFT undoes it | 1.2 on core-a4mk2 0.8 (its ev_track_key, ev_project, ev_pattern; core 0.8 not final) |
 
 0006 (kit FX persistence) is core's mod storage here; dist and wave keep their
 settings there, in the sound (from 2.0), which is what lets core (from core-a4 0.5) p-lock them.

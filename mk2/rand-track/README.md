@@ -14,7 +14,8 @@ Random track, AE 0011, ported to the MKII as an elemod.
   copy). A pop-up reads RANDOM UNDONE. Only the last track randomized has a copy.
   As with stock's CLEAR TRACK + UNDO, the track's fine-resolution lock flags are not
   restored, so a restored lock's fine part is dropped at the next save (kept as stock,
-  decided 2026-11-15).
+  decided 2026-11-15). Loading a project, CREATE NEW or a pattern change forgets the
+  copy, so LEFT then does nothing.
 - The FX track is left alone. The CV track takes notes like a synth track. No settings,
   no storage.
 
@@ -39,13 +40,21 @@ play the 303 way (with dist, on the tracks whose SLD is on).
   free DDR at a fixed address.
 - **One section.** The MK1 split the code over caves; here it is one `.text`.
 
-## Resources (approved 2026-11-14)
+## Resources (approved 2026-11-14; the two handlers that forget the copy decided 2026-11-16)
 
 No code sites; one `ev_track_key` handler (order 50) taking only presses of TRACK +
-YES and TRACK + LEFT; core's track helpers; 1,072 B of code and 15,660 B of `.bss`.
+YES and TRACK + LEFT; an `ev_project` handler (order 50) and an `ev_pattern` handler
+(order 90, never takes a change) that drop the undo copy; core's track helpers; 1,072 B of code and 15,660 B of `.bss`.
 No lock codes, destinations, storage, CCs, NRPNs, pages or settings.
 
 ## Status
+
+**1.2** (core-a4mk2 0.8, not final yet): the undo copy is dropped on a project load or
+CREATE NEW (`ev_project`) and on a pattern change (`ev_pattern`: after it, and before one
+stock makes at once). In 1.1 the copy was matched only to the track pattern object, which
+a load keeps, so LEFT after loading another project put the old project's line into it
+(found on the unit, 2026-11-16). 1.1 otherwise passed the emulator gate (AD24 / AW24) and
+its unit plans on AD24.
 
 **1.1** (core-a4mk2 0.8, not final yet): builds; lints against core 0.8; links in
 AD23 (core 0.8 + dist + scale-lock + slide + rand-track) and AW23 (core 0.8 + wave +
