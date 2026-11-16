@@ -16,7 +16,7 @@ MK1's own copiers and page hooks (0006, most of 0008) have no counterpart here.
 | [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run |
 | [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run |
 | [rand-track](rand-track/README.md) | 0011 | hold a track key + YES: a random line in KEY NOTE + KEY SCALE with accents and slides; + LEFT undoes it | 1.0 built on core 0.7; not yet run |
-| [res-limit](res-limit/README.md) | 0012 | RESONANCE LIMIT in SOUND SETUP: F1 RES plays as 0..80, F2 RES as 0..64, per synth track (kit) | 1.1 on core 0.8: emulator and Analog Four MKII (16 Nov 2026); not yet heard |
+| [res-limit](res-limit/README.md) | 0012 | RESONANCE LIMIT in SOUND SETUP: F1 RES plays as 0..80, F2 RES as 0..64, per synth track (kit) | 1.1 on core 0.8: emulator and Analog Four MKII, heard by the owner (16 Nov 2026) |
 
 0006 (kit FX persistence) is core's mod storage here; dist and wave keep their
 settings there, in the sound (from 2.0), which is what lets core (from core-a4 0.5) p-lock them.

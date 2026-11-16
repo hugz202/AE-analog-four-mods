@@ -78,8 +78,24 @@ The checkbox redraws on YES.
 
 R8L2 ran on an Analog Four MKII (OS 1.56) and passed. With the limit off, F1/F2 RES read 0x7f00. With it on, F1 read 0x5000 and F2 0x4000, stopped and playing. The setting was kept after a save and reload, and both were back to 0x7f00 when it was switched off. The checkbox redraws on YES. CPU was 79.1 % and DSP 75.1 %.
 
+## Listening (16 Nov 2026)
+
+The owner listened to R8L2 on the Analog Four MKII, T1 playing four notes a bar.
+
+- Run t-r8l3 (filters at a new sound's default): with the limit off at RES 127, F1
+  self-oscillated at about 22.5 kHz (-25 dBFS RMS) and held the note about 18 dB down.
+  With the limit on, that tone fell to about -60 dBFS and the note came back at the
+  plain level (-43 dBFS), heard as much louder.
+- Run t-r8l4 (F1 FREQ 64, F2 FREQ 24, limit off): RES 64 resonance on both filters,
+  RES 80 no self-oscillation, RES 96 maybe a little, RES 112 self-oscillation with
+  clipping, RES 127 self-oscillation with more distortion. With the limit on at RES 127:
+  no self-oscillation.
+
+So on the MK2 self-oscillation starts between RES 80 and 96 at these settings, and the
+MK1 caps (F1 80, F2 64) keep both filters below it. The owner kept the MK1 caps.
+
 ## Not checked
 
-- Listening (the owner's check). Only T1 (voice 0) was read, and the wave build (AW +
-  res-limit) was not gated.
-- The sound by ear (a draft until the owner's listening check).
+- Only T1 (voice 0) was read, and the wave build (AW + res-limit) was not gated.
+- RESONANCE BOOST stayed off in the listening runs.
+- Higher filter frequencies were not swept by ear.
