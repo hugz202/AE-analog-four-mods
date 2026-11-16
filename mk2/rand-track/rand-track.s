@@ -30,6 +30,8 @@
         |         the random line is such an edit), if the copy is this track's.
         | The FX track (no notes) is left alone. A pop-up says what happened,
         | built as stock's CLEAR TRACK builds its own.
+        | The copy is dropped on a project load or CREATE NEW (ev_project) and
+        | on a pattern change (ev_pattern), so LEFT then does nothing.
         |
         | KEY SCALE 3..35 are scale-lock's; without scale-lock the menu stops at
         | MIN and only OFF / MAJ / MIN occur. With slide in the build the slide
@@ -71,6 +73,8 @@
         .equ    P_ACC,      64                    | accent (of the trigs)
         .equ    P_SLIDE,    46                    | slide (of the trigs)
         .equ    MAGIC,      0x52414e44            | "RAND"
+        .equ    PATTERN_NOW,   3                  | ev_pattern's how (ui.h)
+        .equ    PATTERN_START, 5                  | NOW 3, SET 4, START 5
         .equ    LOCK_BYTES, 14704                 | a track's lock area (stock: 0x3970)
         .equ    STEP_LOCKS, 228                   | per step
 
@@ -103,6 +107,36 @@ rnd_key:
         moveq   #1,%d0
         rts
 8:      moveq   #0,%d0
+        rts
+
+        | ------------------------------------------------------------------
+        | rnd_project(how, dropped), ev_project: CREATE NEW or any project
+        | load. rnd_pattern(pre, pattern, how), ev_pattern: a pattern change.
+        | Either drops the undo copy: it is matched to the track pattern
+        | object, which stays the same across projects and patterns, so a
+        | LEFT after them would put the old line into the new track.
+        | rnd_pattern drops it after the change (pre 0) and before one that
+        | stock makes at once (pre 1 with PATTERN_NOW, _SET or _START); it
+        | never takes the change (returns 0).
+        | ------------------------------------------------------------------
+        .globl  rnd_project
+        .globl  rnd_pattern
+        .align  2
+rnd_project:
+        clr.l   snap_magic
+        rts
+
+        .align  2
+rnd_pattern:
+        tst.l   4(%sp)                            | pre
+        beq.s   1f
+        move.l  12(%sp),%d0                       | how
+        subq.l  #PATTERN_NOW,%d0
+        moveq   #PATTERN_START-PATTERN_NOW,%d1
+        cmp.l   %d1,%d0
+        bhi.s   2f                                | not NOW, SET or START
+1:      clr.l   snap_magic
+2:      moveq   #0,%d0
         rts
 
         | ------------------------------------------------------------------
