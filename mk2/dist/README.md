@@ -8,7 +8,7 @@ titled "AMP (P 1/2)"):
 
 | knob | setting | range | what | p-lock | LFO, routes, CC |
 |---|---|---|---|---|---|
-| A | DIG | off / on | the track's analog dry sound is muted and the A4's own digitised copy of it is processed instead, through a fixed 12 dB/oct low-cut first (-6 dB at 75 Hz, like filter 2 in HP2 at FRQ ~32, RES 0) so the low end doesn't swamp the drive (2.2) | yes | no |
+| A | DIG | off / on | the track's analog dry sound is muted and the A4's own digitised copy of it is processed instead, through a fixed 12 dB/oct low-cut first (-6 dB at 75 Hz, like filter 2 in HP2 at FRQ ~32, RES 0) so the low end doesn't swamp the drive (2.3) | yes | no |
 | B | CHR | HARD / RAT / OD | the drive's character: a digital clipper; a treble lift, op-amp roll-off, hard clip and 4 kHz tone; a 720 Hz mid hump, soft clip and 2.5 kHz | yes | no |
 | C | DRV | 0..127 | drive: more grit at about the same level | yes | yes |
 | D | BIT | 0..127 | bit reduction, 0 off, then 13 down to 2 bits | yes | yes |
@@ -17,8 +17,8 @@ titled "AMP (P 1/2)"):
 | G | SLD | off / on | [slide](../slide/README.md)'s 303 mode for the track | no | no |
 
 The processed signal also replaces the voice in the effect sends, so the delay,
-reverb and chorus hear the distortion. From 2.2 the sends follow LEV like the dry
-output (LEV 100 sends at about the clean voice's level); 2.1 and before trimmed them
+reverb and chorus hear the distortion. From 2.3 the sends follow LEV like the dry
+output (LEV 100 sends at about the clean voice's level); 2.2 and before trimmed them
 by DRV instead (256 - DRV, Q8).
 
 From 2.0 (core-a4 0.5) the settings are kept with the **sound**, not the kit, so they
@@ -80,13 +80,27 @@ settings, locks, lock codes and CCs are 2.1's.
 
 ## Status
 
-**2.2** (core-a4mk2 0.7): the MK1's OS-1.56 0007 update (upstream commit ffcdc20,
-26 Oct 2026, hardware-verified on an MK1) on 2.1: the input low-cut (`hp2`, two
+**2.3** (core-a4mk2 0.7): the MK1's OS-1.56 0007 update (upstream commit ffcdc20,
+26 Oct 2026, hardware-verified on an MK1) on 2.2 (the knob looks): the input low-cut (`hp2`, two
 one-pole high-passes at 75 Hz, shifts and adds only, ahead of the drive and the
 RAT/OD filters) and the sends' gain from LEV (`hp_set`). The DSP record per track
 grows from 14 to 16 longs (the low-cut's two states, cleared when out of range). No
-storage, site, lock or CC change: the lockfile from AD21 still applies. Changes the
-sound: not yet run in the emulator or on a unit, and not yet listened to.
+storage, site, lock or CC change: the lockfile from AD21 still applies. The audio code
+was run first on 2.1 as a build of its own (dist "2.2" on branch mk2-dist-lowcut, build
+DL22: core-a4mk2 0.8, analoghealth 1.2, scale-lock 1.1, slide 1.1; plans `t-dl22`):
+emulator gate passed (14-15 Nov 2026), then on an Analog Four MKII (16 Nov 2026, hardware
+test T382): flashes both ways, the DIST page and `dist_set` with DIG off and with DIG on,
+HARD, DRV 64, BIT 0, SRR 0, LEV 100, and an A/B listening check by the owner on T1 (four
+notes a bar): B as expected, with an occasional click on the attack of some notes only,
+judged likely the free-running oscillators' phase at note start through the drive, not
+an artefact (not proven). CPU on DL22 79 %. 2.3 itself (with 2.2's knob looks; build
+DL23, the same modules with dist 2.3, plans `t-dl23`) passed the emulator gate and ran on the
+unit on 16 Nov 2026 (hardware test T390): flashes both ways, the DIST settings read back
+matching the emulator's, CPU 82.6-82.8 % before any key (heap flat), and the owner's
+listens: DIG on with DRV 0 about the same as DIG off, DRV 127 HARD no artefacts, DRV 64
+HARD with free-running oscillators intermittent attack clicks (every 5-7 notes), and the
+same with oscillator retrig on no clicks. So the attack clicks are the oscillators' phase
+at note start through the drive, not the low-cut.
 
 **2.1** (core-a4mk2 0.7, build AD21 with scale-lock and slide): the same code as 2.0, built and linked with
 core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
