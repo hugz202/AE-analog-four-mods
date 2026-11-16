@@ -11,7 +11,7 @@ MK1's own copiers and page hooks (0006, most of 0008) have no counterpart here.
 
 | folder | MK1 mods | what | status |
 |---|---|---|---|
-| [scale-lock](scale-lock/README.md) | 0001 | KEY SCALE with 35 scales; notes and the NOTE encoder kept in the scale | 1.0 hardware; 1.1 (core 0.7 build, unchanged code) in the 16 Nov unit builds R8L2, DL22, AD26, AW26 and DL23 (T380, T382-T386, T388, T390, T391), with no checks of its own |
+| [scale-lock](scale-lock/README.md) | 0001 | KEY SCALE with 35 scales; notes and the NOTE encoder kept in the scale | 1.0 hardware; 1.1 on an Analog Four MKII (16 Nov): KEY SCALE set to LOCR, one of scale-lock's scales, and rand-track's line checked in C locrian (T378, T386, T388); notes played on the keys not checked this round |
 | [slide](slide/README.md) | 0002 | 303 slide: the slide trig on the note you glide from | 1.0 hardware; 1.1 (core 0.7 build, unchanged code) in the 16 Nov unit builds R8L2, DL22, AD26, AW26 and DL23 (T380, T382-T386, T388, T390, T391), with no checks of its own |
 | [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T388); 2.3 (the MK1's 75 Hz low-cut before the drive, sends follow LEV): on a unit by ear (T382, T390; attack clicks traced to free-running oscillator phase) |
 | [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T386; step-to-step strength traced to free-running OSC1 phase in T391) |

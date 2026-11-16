@@ -35,9 +35,10 @@ the pattern; a pattern with a new scale opened on stock reads KEY SCALE OFF.
 **1.1** (core-a4mk2 0.7, build AD21 and AW21): the same code as 1.0, built and linked with
 core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
 storage layout, lock codes and CCs are unchanged and projects saved by the earlier
-build keep their settings. On 16 Nov 2026 it was in the builds R8L2, DL22, AD26, AW26 and DL23 that passed on an
-Analog Four MKII (hardware tests T380, T382-T386, T388, T390, T391); those runs had no
-checks of its own for it.
+build keep their settings. On an Analog Four MKII on 16 Nov 2026 (hardware tests T378, T386, T388): KEY SCALE set
+to LOCR (a scale stock does not offer) and rand-track's random line checked to keep every
+note in C locrian. Notes played on the trig keys and the NOTE encoder were not checked
+in that round.
 
 In rytm-emu's A4 build (24 Oct 2026), core-a4 0.2 with dist, slide, wave and
 analoghealth: KEY SCALE steps OFF, MAJ, MIN, DOR ... and stops at LO37 with each
