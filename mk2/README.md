@@ -13,8 +13,8 @@ MK1's own copiers and page hooks (0006, most of 0008) have no counterpart here.
 |---|---|---|---|
 | [scale-lock](scale-lock/README.md) | 0001 | KEY SCALE with 35 scales; notes and the NOTE encoder kept in the scale | 1.0 hardware; 1.1 on an Analog Four MKII (16 Nov): KEY SCALE set to LOCR, one of scale-lock's scales, and rand-track's line checked in C locrian (T378, T386, T388); notes played on the keys not checked this round |
 | [slide](slide/README.md) | 0002 | 303 slide: the slide trig on the note you glide from | 1.0 hardware; 1.1 (core 0.7 build, unchanged code) in the 16 Nov unit builds R8L2, DL22, AD26, AW26 and DL23 (T380, T382-T386, T388, T390, T391), with no checks of its own |
-| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T388); 2.3 (the MK1's 75 Hz low-cut before the drive, sends follow LEV): on a unit by ear (T382, T390; attack clicks traced to free-running oscillator phase); 2.4 (knob ids from the linker): not yet run |
-| [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T386; step-to-step strength traced to free-running OSC1 phase in T391); 2.3 (knob ids from the linker): not yet run |
+| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T388); 2.3 (the MK1's 75 Hz low-cut before the drive, sends follow LEV): on a unit by ear (T382, T390; attack clicks traced to free-running oscillator phase); 2.4 (knob ids from the linker): not yet run; 2.5 (on core-a4mk2-dl's audio events, no OS sites): emulator sample compare passed, not yet on a unit |
+| [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T386; step-to-step strength traced to free-running OSC1 phase in T391); 2.3 (knob ids from the linker): not yet run; 2.4 (on core-a4mk2-dl's audio events, no OS sites): emulator screens and buffers, not yet on a unit |
 | [rand-track](rand-track/README.md) | 0011 | hold a track key + YES: a random line in KEY NOTE + KEY SCALE with accents and slides; + LEFT undoes it | 1.2 on core-a4mk2 0.8 (its ev_track_key, ev_project, ev_pattern): Analog Four MKII by screens and memory checks, not by ear (T386, T388) |
 | [res-limit](res-limit/README.md) | 0012 | RESONANCE LIMIT in SOUND SETUP: F1 RES plays as 0..80, F2 RES as 0..64, per synth track (kit) | 1.1 on core 0.8: Analog Four MKII by memory reads (T380) and by ear (T383, T384) |
 
@@ -28,7 +28,8 @@ settings there, in the sound (from 2.0), which is what lets core (from core-a4 0
 
 With an elekloader checkout that gives the Analog Four MKII knob ids (branch
 drive-loader-a4mk2 from e9cf675; dist 2.4 and wave 2.3 declare `"knobs"`, which
-older checkouts refuse) and the stock OS 1.56 `.syx`:
+older checkouts refuse; dist 2.5 and wave 2.4 also need core-a4mk2-dl's audio events,
+branch dl-a4-audio-events from 3a72318) and the stock OS 1.56 `.syx`:
 
 ```
 python3 -m elekloader.sdk.build mods/core-a4mk2 --stock Analog-Four_MKII_OS1.56.syx
@@ -49,9 +50,10 @@ settings an earlier build saved as zeros (the defaults).
 - rand-track combines with every other mod (no sites of its own, no storage); it needs core-a4mk2 0.8.
 - res-limit combines with every other mod (no sites of its own, 4 kit bits, no sound bits); it needs core-a4mk2 0.8.
 - **dist and wave do not combine** from 2.0: each keeps its settings in the sound
-  (dist all 32 bits a sound keeps, wave 6), and each answers the knob-name getters.
-  The patcher refuses the pair ("dist 2.0 site 0x4009e79e and wave 2.0 site
-  0x4009e79e overlap"). Not every AE mod needs to fit in one build.
+  (dist all 32 bits a sound keeps, wave 6). Up to dist 2.4 and wave 2.3 each also
+  answered the knob-name getters, and the patcher refused the pair ("dist 2.0 site
+  0x4009e79e and wave 2.0 site 0x4009e79e overlap"); from dist 2.5 and wave 2.4 neither
+  has a site and only the storage keeps them apart. Not every AE mod needs to fit in one build.
 - slide's per-track switch is SLD on dist's page. Without dist, every synth track
   slides the 303 way.
 - dist and wave take the sound's whole room between them, so neither can share a

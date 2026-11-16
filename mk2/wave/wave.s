@@ -2,18 +2,18 @@
         | wave - AE 0010 (digital wave / chord oscillator) for the Analog Four
         | MKII, OS 1.56, as an elekloader elemod on core-a4mk2 0.7
         | (written for core-a4 0.5). This file is
-        | the audio side and the knob-name gates; wave.c is the NOISE page's
-        | two knobs.
+        | the audio side, on core-a4mk2-dl's noise events (no OS sites); wave.c
+        | is the NOISE page's two knobs and their names (core_knob_names).
         |
         | The noise generator (audio interrupt, 32 samples a block) builds three
         | filtered noises per voice and crossfades them by COL into the voice's
         | noise DAC buffer, scaled by the noise level and its fade envelope. For
         | each voice whose sound has WAV or CHD on:
-        |   - wave_fad (after the fade envelopes are updated, before the
-        |     levels are taken from them, 0x400ffe04) sets the voice's envelope
+        |   - wave_fad (ev_noise_fade: after the fade envelopes are updated,
+        |     before the levels are taken from them) sets the voice's envelope
         |     to full, so the wave is never faded and FAD is free to be the FM
         |     depth, and notes the voice's mode;
-        |   - wave_mix (the start of the final mix, 0x400ffe50) overwrites all
+        |   - wave_mix (ev_noise_mix: the start of the final mix) overwrites all
         |     three sources with the oscillator, so the stock mix applies LEV to
         |     it unchanged (COL's crossfade weights sum to 1). A voice whose VCA
         |     is closed (no note sounding) is not computed: its sources are
@@ -52,10 +52,6 @@
         | Calls follow the stock ABI: d0/d1/a0/a1 are scratch, the rest is saved.
 
         | OS 1.56 addresses (re/symbols.toml on the MK2-OS-1.56 branch)
-        .equ    noise_mix_resume,  0x400ffe56
-        .equ    short_name_resume, 0x4009e7a8
-        .equ    long_name_resume,  0x4009e7cc
-        .equ    fade_level_resume, 0x400ffe0a
 
         .equ    NCHORDS,      13
         .equ    SW_FIRST,     11                  | the first supersaw type
@@ -97,11 +93,12 @@
         .equ    P_SIZE,       72
 
         .text
-        .globl  wave_mix, wave_fad, wave_sname, wave_lname
+        .globl  wave_mix, wave_fad
 
         | ------------------------------------------------------------------
-        | The final noise mix, at `lea 0x80005ba8,%a1` (its first instruction;
-        | nothing is live in registers here, the mix loads all it needs).
+        | ev_noise_mix(bufs, voice_track), core-a4mk2-dl's event at the final
+        | noise mix's start (0x400ffe50); a C call. The sources are addressed
+        | as before (BUF0.. are bufs' records).
         | ------------------------------------------------------------------
         .align  2
 wave_mix:
@@ -135,14 +132,14 @@ wave_mix:
         bne.s   1b
         movem.l (%sp),%d2-%d7/%a2-%a6
         lea     44(%sp),%sp
-        lea     NOISE_COL,%a1                     | displaced
-        jmp     noise_mix_resume
+        rts
 
         | ------------------------------------------------------------------
-        | After the fade envelopes are updated, before the levels are taken
-        | from them (`lea 0x80002be8,%a0`, re-emitted): find the voices whose
-        | track has WAV or CHD on (WMASK, their mode bytes in VMODE) and set
-        | their envelopes to full.
+        | ev_noise_fade(env, voice_track), core-a4mk2-dl's event after the fade
+        | envelopes are updated, before the levels are taken from them
+        | (0x400ffe04); a C call (env is FADE_ENV, voice_track VOICE_TRACK):
+        | find the voices whose track has WAV or CHD on (WMASK, their mode
+        | bytes in VMODE) and set their envelopes to full.
         | ------------------------------------------------------------------
         .align  2
 wave_fad:
@@ -179,8 +176,7 @@ wave_fad:
         move.b  %d3,WMASK
         movem.l (%sp),%d2-%d3/%a2
         lea     12(%sp),%sp
-        lea     FADE_ENV,%a0                      | displaced
-        jmp     fade_level_resume
+        rts
 
         | c127(d0) -> d0 clamped to 0..127.
         .align  2
@@ -503,41 +499,6 @@ chords: .byte   0, 0xff, 0xff, 0xff   | WAV 0
         | ==================================================================
         | Knob names
         | ==================================================================
-
-        | ------------------------------------------------------------------
-        | The parameter sets' name getters (set, id), at their entries
-        | (0x4009e79e short, 0x4009e7c2 long; both `movel %sp@(8),%d0;
-        | cmpil #295,%d0`). From core-a4 0.5 core calls these for every id it
-        | does not name itself: wave_name_of (wave.c) names the mode and chord
-        | knobs by their value, and S&H, COL and FAD as SHP, FLD and FM while
-        | the active track's sound has WAV or CHD on, and answers 0 for the
-        | rest. d0/d1/a0/a1 are free, as for any call.
-        | ------------------------------------------------------------------
-        .align  2
-wave_sname:
-        clr.l   -(%sp)                            | wave_name_of(id, 0): short
-        move.l  12(%sp),-(%sp)
-        jsr     wave_name_of
-        addq.l  #8,%sp
-        tst.l   %d0
-        beq.s   9f
-        rts
-9:      move.l  8(%sp),%d0                        | displaced
-        cmpi.l  #295,%d0                          | displaced
-        jmp     short_name_resume
-
-        .align  2
-wave_lname:
-        pea     1                                 | wave_name_of(id, 1): long
-        move.l  12(%sp),-(%sp)
-        jsr     wave_name_of
-        addq.l  #8,%sp
-        tst.l   %d0
-        beq.s   9f
-        rts
-9:      move.l  8(%sp),%d0                        | displaced
-        cmpi.l  #295,%d0                          | displaced
-        jmp     long_name_resume
 
         .data
         .globl  wave_trk

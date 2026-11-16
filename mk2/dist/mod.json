@@ -1,11 +1,11 @@
 {
  "id": "dist",
- "version": "2.4",
+ "version": "2.5",
  "title": "DIST",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
  "license": "MIT",
- "description": "A digital path with distortion for each synth track, on a DIST page: on a synth track press AMP a second time. DIG swaps the track's analog dry sound for the A4's own digitised copy of it and processes that instead, through a fixed 12 dB/oct low-cut at 75 Hz so the low end doesn't swamp the drive. CHR picks the drive's character (HARD, a digital clipper; RAT, a treble lift, an op-amp roll-off, hard clip and a 4 kHz tone; OD, a 720 Hz mid hump, soft clip and 2.5 kHz), DRV the drive (more grit at about the same level), BIT the bit reduction, SRR the sample-rate reduction and LEV the processed signal's level (about 100 is level with the analog path). The processed signal also feeds the delay, reverb and chorus, at LEV's level. SLD is slide's 303 mode for the track. The settings are kept with the sound, in core-a4mk2's mod storage (all 32 bits of a sound's room, so wave cannot be in the same build). DIG, CHR, DRV, BIT, SRR and LEV can be p-locked; DRV, BIT, SRR and LEV are also LFO, envelope, route, macro and CONTROL IN destinations and have a CC and an NRPN each (DIG and CHR an NRPN). Needs core-a4mk2 0.7. Port of AE-analog-four-mods 0007-digital-path and 0008-pages (Analog Four MK1).",
+ "description": "A digital path with distortion for each synth track, on a DIST page: on a synth track press AMP a second time. DIG swaps the track's analog dry sound for the A4's own digitised copy of it and processes that instead, through a fixed 12 dB/oct low-cut at 75 Hz so the low end doesn't swamp the drive. CHR picks the drive's character (HARD, a digital clipper; RAT, a treble lift, an op-amp roll-off, hard clip and a 4 kHz tone; OD, a 720 Hz mid hump, soft clip and 2.5 kHz), DRV the drive (more grit at about the same level), BIT the bit reduction, SRR the sample-rate reduction and LEV the processed signal's level (about 100 is level with the analog path). The processed signal also feeds the delay, reverb and chorus, at LEV's level. SLD is slide's 303 mode for the track. The settings are kept with the sound, in core-a4mk2's mod storage (all 32 bits of a sound's room, so wave cannot be in the same build). DIG, CHR, DRV, BIT, SRR and LEV can be p-locked; DRV, BIT, SRR and LEV are also LFO, envelope, route, macro and CONTROL IN destinations and have a CC and an NRPN each (DIG and CHR an NRPN). Needs core-a4mk2 0.8 with the audio events of core-a4mk2-dl (ev_fx_in, ev_fx_out, core_dry_mute, core_knob_names): no OS sites of its own. Port of AE-analog-four-mods 0007-digital-path and 0008-pages (Analog Four MK1).",
  "device": "analog-four-mk2",
  "os": "1.56",
  "sources": [
@@ -22,17 +22,12 @@
   {"sym": "dist_lev", "scope": "sound", "bits": 7, "lock": true, "mod": true, "cc": true},
   {"sym": "dist_sld_f", "scope": "sound", "bits": 1}
  ],
- "sites": [
-  {"addr": "0x400fa6c4", "stock": "2013ae000800", "op": "jmp", "target": "dist_dry"},
-  {"addr": "0x400fe73c", "stock": "4fefff7448d77cfc", "op": "jmp", "target": "dist_fxin"},
-  {"addr": "0x400feace", "stock": "23c041864a74", "op": "jmp", "target": "dist_fxout"},
-  {"addr": "0x4009e79e", "stock": "202f00080c8000000127", "op": "jmp", "target": "dist_sname"},
-  {"addr": "0x4009e7c2", "stock": "202f00080c8000000127", "op": "jmp", "target": "dist_lname"}
- ],
  "subscribe": [
   {"event": "ev_tick", "fn": "dist_tick", "order": 50},
   {"event": "ev_project", "fn": "dist_project", "order": 50},
-  {"event": "ev_render_out", "fn": "dist_render", "order": 50}
+  {"event": "ev_render_out", "fn": "dist_render", "order": 50},
+  {"event": "ev_fx_in", "fn": "dist_fxin", "order": 50},
+  {"event": "ev_fx_out", "fn": "dist_fxout", "order": 50}
  ],
  "contribute": [
   {"to": "core_pages", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_page", 0]]},
@@ -48,10 +43,11 @@
   {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_dig", 0]]},
   {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_chr", 0]]},
   {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_dials", 0]]},
-  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_sld", 0]]}
+  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_sld", 0]]},
+  {"to": "core_knob_names", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_knob_sld", 0]]}
  ],
  "resources": {
-  "core": "0.7"
+  "core": "0.8"
  },
  "requires": [
   "core"

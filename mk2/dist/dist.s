@@ -21,12 +21,11 @@
         |
         | Calls follow the stock ABI: d0/d1/a0/a1 are scratch, the rest is saved.
 
-        | OS 1.56 addresses (re/symbols.toml on the MK2-OS-1.56 branch)
-        .equ    dry_volume_resume,    0x400fa6ca
-        .equ    fx_block_body,        0x400fe744
-        .equ    fx_block_tail_resume, 0x400fead4
-        .equ    short_name_resume,    0x4009e7a8
-        .equ    long_name_resume,     0x4009e7cc
+        | No OS sites: the audio side runs on core-a4mk2's audio events
+        | (core-a4mk2-dl): dist_fxin on ev_fx_in and dist_fxout on ev_fx_out,
+        | around the effects block's call, and the dry mute through core's
+        | core_dry_mute (dist_render, dist.c); SLD's name through
+        | core_knob_names (dist.c).
 
         .equ    TRK_SIZE,   6
         .equ    F_DIG,      0
@@ -37,53 +36,26 @@
         .equ    F_SLD,      5
         .equ    FRAMES,     32
         .equ    FRAME_SIZE, 32                    | 8 codec slots of 32 bits
-        .equ    FX_STATE4,  0x41864a74            | what fx_block_tail stores
-                                                  | (MK1: 0x415c0008)
         .equ    VOICE0_SLOT, 8                    | track 0's slot in a frame: the
                                                   | MKII send mix reads slots 2..7
                                                   | (four voices, then the input;
                                                   | MK1: 0..3 and 6..7)
 
         .text
-        .globl  dist_dry, dist_fxin, dist_fxout, dist_sname, dist_lname
+        .globl  dist_fxin, dist_fxout
 
         | ==================================================================
         | Audio side (the audio interrupt)
         | ==================================================================
 
         | ------------------------------------------------------------------
-        | track_levels, at `movel %a3@,%d0; macl %d0,%d7,%acc0`: the volume
-        | loaded for the analog dry VCA words only (the send gain is already
-        | written). d2 = track, d1 and a0 dead. A track on the digital path gets
-        | a dry volume of 0 - what stock computes for VOL 0 - and keeps its
-        | capture.
-        | ------------------------------------------------------------------
-        .align  2
-dist_dry:
-        lea     dist_set,%a0
-        moveq   #3,%d0
-        cmp.l   %d0,%d2
-        bhi.s   1f
-        move.l  %d2,%d1
-        mulu.w  #TRK_SIZE,%d1
-        tst.b   F_DIG(%a0,%d1.l)
-        beq.s   1f
-        moveq   #0,%d0
-        bra.s   2f
-1:      move.l  (%a3),%d0                         | displaced
-2:      mac.l   %d0,%d7,%acc0                     | displaced
-        jmp     dry_volume_resume
-
-        | ------------------------------------------------------------------
-        | fx_block, at its entry. The prologue is re-emitted first (all
-        | registers are then saved and restored by stock at the exit), so the
-        | registers are free here. frames = 144(%sp) after the prologue.
+        | ev_fx_in(frames, out, voice_track), before the effects block: a C
+        | call, so d2-d7/a2-a6 are saved here; frames = 48(%sp) after that.
         |
         | Each track on the digital path is distorted here, before the send mix:
         | the result replaces the voice's slot in the codec frames - so delay,
         | reverb and chorus take the distorted voice - and is kept in dist_cap
-        | for dist_fxout, because the block writes its output over the start of
-        | the same frames. Worked in x = slot >> 8 (a voice peaks near 2^20):
+        | for dist_fxout (the frames are not ev_fx_out's to rely on). Worked in x = slot >> 8 (a voice peaks near 2^20):
         |   drive  y = clip(x * g, +-CLIP), g = (16 + DRV % 16) / 16 << DRV / 16
         |          (DRV 0 = unity, +6 dB per 16, up to +48 dB). The clip level
         |          sits a little above a normal voice, so DRV changes the grit,
@@ -139,10 +111,10 @@ dist_dry:
         .equ    H2,         15*FS
         .align  2
 dist_fxin:
-        lea     -140(%sp),%sp                     | displaced
-        movem.l %d2-%d7/%a2-%a6,(%sp)             | displaced
+        lea     -44(%sp),%sp
+        movem.l %d2-%d7/%a2-%a6,(%sp)
         lea     dist_set,%a2                      | track 0's settings
-        move.l  144(%sp),%a3                      | the frames
+        move.l  48(%sp),%a3                       | the frames
         addq.l  #VOICE0_SLOT,%a3                  | track 0's slot in them
         lea     dist_cap,%a1
         lea     dist_hold,%a5                     | &hold[0]
@@ -355,7 +327,9 @@ dist_fxin:
         lea     REC(%a5),%a5
         subq.l  #1,%d7
         bne.w   1b
-        jmp     fx_block_body
+        movem.l (%sp),%d2-%d7/%a2-%a6
+        lea     44(%sp),%sp
+        rts
 
         | ------------------------------------------------------------------
         | The input HP, ahead of everything on the digital path (the drive is
@@ -414,19 +388,18 @@ hp_set: mvz.b   F_LEV(%a2),%d0
         rts
 
         | ------------------------------------------------------------------
-        | fx_block, after its output loop (a4 just past the 32 output pairs):
-        | each track on the digital path adds its processed voice from
-        | dist_cap to both output channels (centre), at
+        | ev_fx_out(out, frames, voice_track), after the effects block (out
+        | its 32 output pairs): each track on the digital path adds its
+        | processed voice from dist_cap to both output channels (centre), at
         |   out += (y >> 2) * LEV * 13 / 32   (y = the x-scale sample from
         | dist_fxin). Calibrated on hardware (the MK1): LEV ~100 matches the
-        | same sound on the analog path, 127 = +2 dB over it. The displaced
-        | store goes first; a0 and d1 must survive (stock stores them next).
+        | same sound on the analog path, 127 = +2 dB over it. A C call:
+        | d2-d4/a2-a3 are saved here; out = 24(%sp) after that.
         | ------------------------------------------------------------------
         .align  2
 dist_fxout:
-        move.l  %d0,FX_STATE4                     | displaced
-        lea     -32(%sp),%sp
-        movem.l %d1-%d4/%a0-%a3,(%sp)
+        lea     -20(%sp),%sp
+        movem.l %d2-%d4/%a2-%a3,(%sp)
         lea     dist_set,%a2
         lea     dist_cap,%a1
         moveq   #4,%d4                            | tracks left
@@ -435,7 +408,7 @@ dist_fxout:
         beq.s   8f
         mvz.b   F_LEV(%a2),%d3                    | level
         mulu.w  #13,%d3
-        lea     -FRAMES*8(%a4),%a3                | the output pairs
+        move.l  24(%sp),%a3                       | the output pairs
         moveq   #FRAMES,%d2
 2:      move.l  (%a1)+,%d0
         asr.l   #2,%d0
@@ -456,48 +429,9 @@ dist_fxout:
 9:      lea     TRK_SIZE(%a2),%a2
         subq.l  #1,%d4
         bne.s   1b
-        movem.l (%sp),%d1-%d4/%a0-%a3
-        lea     32(%sp),%sp
-        jmp     fx_block_tail_resume
-
-        | ==================================================================
-        | Knob names
-        | ==================================================================
-
-        | ------------------------------------------------------------------
-        | The parameter sets' name getters (set, id), at their entries
-        | (0x4009e79e short, 0x4009e7c2 long; both `movel %sp@(8),%d0;
-        | cmpil #295,%d0`). From core-a4 0.5 core names its lockable knobs
-        | itself and calls these for every other id, so only SLD's knob, the
-        | one dist knob that is not lockable (an id above 0x126, which no
-        | stock list holds), is named here: dist_name_of (dist.c) answers it
-        | and 0 for any other id. d0/d1/a0/a1 are free, as for any call.
-        | ------------------------------------------------------------------
-        .align  2
-dist_sname:
-        clr.l   -(%sp)                            | dist_name_of(id, 0): short
-        move.l  12(%sp),-(%sp)
-        jsr     dist_name_of                      | (dist.c)
-        addq.l  #8,%sp
-        tst.l   %d0
-        beq.s   9f
+        movem.l (%sp),%d2-%d4/%a2-%a3
+        lea     20(%sp),%sp
         rts
-9:      move.l  8(%sp),%d0                        | displaced
-        cmpi.l  #295,%d0                          | displaced
-        jmp     short_name_resume
-
-        .align  2
-dist_lname:
-        pea     1                                 | dist_name_of(id, 1): long
-        move.l  12(%sp),-(%sp)
-        jsr     dist_name_of
-        addq.l  #8,%sp
-        tst.l   %d0
-        beq.s   9f
-        rts
-9:      move.l  8(%sp),%d0                        | displaced
-        cmpi.l  #295,%d0                          | displaced
-        jmp     long_name_resume
 
         | ==================================================================
         | Data

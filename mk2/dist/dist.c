@@ -86,6 +86,7 @@ STORE_FIELD(dist_sld_f);
 
 extern unsigned char dist_set[];    /* dist.s: 6 bytes a track (DIG DRV BIT SRR LEV SLD), then CHR x 4 */
 extern unsigned char dist_sld[];    /* dist.s: 1, then each track's SLD */
+extern volatile unsigned char core_dry_mute;   /* core: bit v mutes voice v's dry words; cleared each block */
 
 #define CAT CORE_LOCK_CATEGORY("DIST")
 const struct core_lock_param dist_lp_dig = {STORE(dist_dig), ID_DIG, 0, 1, "DIG", "Digital Path", CAT};
@@ -273,13 +274,27 @@ const struct core_page dist_page = {PAGE_DIST, "DIST (P 2/2)",
 const struct core_page dist_amp_page = {PAGE_AMP, "AMP (P 1/2)", {89, 90, 91, 92, 93, 94, 95, 96, 97, 98}};
 const struct core_view_page dist_view_page = {CORE_TRACK_SYNTH, CORE_KEY_AMP, PAGE_DIST, 0};
 
-/* dist.s's name gates: SLD's names, 0 for any other id */
+/* SLD's names, through core's knob names (core_knob_names; SLD is the one
+ * dist knob that is not lockable, so core has no name for it) */
 const char *dist_name_of(int32_t id, int32_t long_name)
 {
     return id != ID_SLD ? 0 : long_name ? "303 Slide" : "SLD";
 }
 
-/* each audio block, after core's snapshot (order 1): what each track plays */
+/* core_knob_names' entry (analog-four-mk2/ui.h, struct core_knob_name) */
+struct dist_knob_name {
+    uint16_t first_id, last_id;
+    uint8_t kind, pad[3];
+    const char *(*name)(int32_t id, int32_t long_name);
+};
+/* the ids are 16 bits there, and SLD's id is the linker's (an abs32
+ * relocation), so the entry spans every id and dist_name_of picks SLD */
+const struct dist_knob_name dist_knob_sld = {0, 0xffff, 0, {0, 0, 0}, dist_name_of};
+
+/* each audio block, after core's snapshot (order 1): what each track plays,
+ * and core_dry_mute's bit for each track on the digital path. Voice t takes
+ * track t's settings (2.3's mapping, kept so the output is unchanged; a poly
+ * or unison track's other voices take their own track index's) */
 void dist_render(void)
 {
     static int h[4];
@@ -298,6 +313,7 @@ void dist_render(void)
         dist_set[24 + t] = l >= 0 ? (l > 2 ? 2 : l) : dist_base[t][1];
         if (!d[0])
             continue;                       /* off: the audio side reads nothing else */
+        core_dry_mute |= 1 << t;            /* the next block's dry words: volume 0 (voice t) */
         core_param_values(t, h, 4, 0, v);
         for (i = 0; i < 4; i++) {
             int32_t x = v[i] == CORE_PARAM_NONE ? 0 : (v[i] + 128) >> 8;
