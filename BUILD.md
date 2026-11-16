@@ -75,6 +75,8 @@ or stops with an error, don't flash that file.
 | `0008-pages` | 0007 | the DIST page (AMP pressed twice) |
 | `0002-slide-303` | - (see below) | 303 slide |
 | `0010-wave-osc` | 0006, 0007, 0008 | the digital wave / chord oscillator on the NOISE page |
+| `0011-rand-track` | - | random track (track key + YES, LEFT undoes); uses 0001's KEY SCALE if present |
+| `0012-res-limit` | 0010 | RESONANCE LIMIT in SOUND SETUP (it shares 0010's word in the sound) |
 
 Rules of thumb:
 
@@ -82,7 +84,10 @@ Rules of thumb:
 - The distortion is the three of them together: `0006-fx-slot 0007-digital-path
   0008-pages`.
 - The wave / chord oscillator (0010) builds on those three: its knob and labels use
-  their page machinery, so add it to them, not on its own.
+  their page machinery, so add it to them, not on its own. The resonance limit (0012)
+  needs 0010 in the build.
+- The random track (0011) stands alone; with the scale lock its notes follow any of
+  its scales, without it KEY SCALE has the stock choices.
 - For the HARD-only drive, add `PARAMS="0007-digital-path:chr=0"` (what `make hard`
   does).
 - The 303 slide works two ways:

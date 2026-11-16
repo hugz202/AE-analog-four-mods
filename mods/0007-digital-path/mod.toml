@@ -8,7 +8,7 @@ title   = "Digital path: per-track snatch + distortion (HARD / RAT / OD), edited
 enabled = false
 
 # re-only | built | hardware-verified | retracted
-status  = "built"
+status  = "hardware-verified"
 
 # 0004 hooks the same dry-volume load; it is a measuring probe, never in this build.
 excludes = ["0004-dsp-probe"]
@@ -17,7 +17,9 @@ summary = """
 Per synth track, on the DIST page (press AMP twice):
 
   DIG   switch: the track's analog dry sound is muted and its digitised copy is
-        processed instead (the A4 already digitises each voice for the effects)
+        processed instead (the A4 already digitises each voice for the effects),
+        through a fixed 12 dB/oct high-pass first (-6 dB at 75 Hz, as filter 2's
+        HP2 at FRQ ~32, RES 0) so the low end doesn't swamp the drive
   CHR   3 positions: HARD (digital clipper), RAT (treble lift, darkening op-amp
         roll-off, hard clip, 4 kHz tone), OD (720 Hz mid hump, soft clip, 2.5 kHz)
   DRV   drive into the clipper: 0 = clean, +6 dB per 16 steps, the first ~9.5 dB

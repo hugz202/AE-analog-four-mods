@@ -1,0 +1,45 @@
+[mod]
+id      = "0012-res-limit"
+title   = "Resonance limit: a SOUND SETUP checkbox that keeps F1 / F2 RES below self-oscillation"
+
+# Not in the default build: `make hard` / `make full` build it with the others.
+# Needs 0010 (which carries the sound's word 103 through loads and masks bit 7 out
+# of its own mode byte). OS 1.56.
+enabled = false
+
+# re-only | built | hardware-verified | retracted
+status  = "hardware-verified"
+
+summary = """
+FUNC + OSC1 (SOUND SETUP) gets a third checkbox under OSCILLATOR DRIFT and F1
+RESONANCE BOOST: RESONANCE LIMIT. With it on, the sound's filter resonances are
+scaled - F1 RES 0..127 plays as 0..80, F2 RES as 0..64 - after the knob, p-locks,
+LFOs and envelopes are added, so the whole knob travel stays usable and nothing
+pushes the filters into self-oscillation. It is saved with the sound (bit 7 of its
+unused parameter word 103, beside 0010's oscillator mode), so it follows the sound
+through kits, the sound pool and copies (hardware-verified 2026-10-19 at 90 / 70; tuned
+to 80 / 64 after). (The digital path's -18 send trim that lived here is gone: 0007's
+sends now follow LEV.)
+"""
+
+[sources]
+stub = "stub.s"
+
+[requires]
+symbols = [
+  "project_ptr",
+  "project_singleton",
+  "project_track_ctx",
+  "track_index_of",
+  "active_kit",
+  "kit_track_sound",
+  "op_new",
+  "functor_dtor",
+  "menu_toggle_item",
+  "boost_managers",
+  "string_from_cstr",
+  "icon_for",
+  "icon_set",
+  "draw_icon",
+  "change_info_vt",
+]

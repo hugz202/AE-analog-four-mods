@@ -4,7 +4,11 @@ import tomllib
 from pathlib import Path
 
 # claim table -> the pools a claim may live inside; each claim must fit wholly in one
-POOL_OF = {"cave": ("cave", "cave2", "cave3", "cave4", "cave5", "cave6"),
+POOL_OF = {"cave": ("cave", "cave2", "cave3", "cave4", "cave5", "cave6",
+                 "cave7", "cave8", "cave9", "cave10", "cave11",
+                 "cave12", "cave13", "cave14", "cave15", "cave16", "cave17",
+                 "cave18", "cave19", "cave20",
+                 "cave21", "cave22", "cave23", "cave24", "cave25", "cave26", "cave27", "cave28"),
            "ram": ("patch_ram",)}
 
 # A pool at status "candidate" has not been proven on hardware, so the only thing
