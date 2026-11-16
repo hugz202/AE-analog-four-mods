@@ -86,16 +86,24 @@ The owner listened to R8L2 on the Analog Four MKII, T1 playing four notes a bar.
   self-oscillated at about 22.5 kHz (-25 dBFS RMS) and held the note about 18 dB down.
   With the limit on, that tone fell to about -60 dBFS and the note came back at the
   plain level (-43 dBFS), heard as much louder.
-- Run t-r8l4 (F1 FREQ 64, F2 FREQ 24, limit off): RES 64 resonance on both filters,
-  RES 80 no self-oscillation, RES 96 maybe a little, RES 112 self-oscillation with
-  clipping, RES 127 self-oscillation with more distortion. With the limit on at RES 127:
-  no self-oscillation.
+- Run t-r8l4 (F1 FREQ 64, F2 FREQ 24, both RES moved together, limit off), heard and
+  measured on Synth Trk 1 (RMS; 500-2000 Hz band where F1's tone sits):
+  - RES 64: resonance on both filters. RMS -40.9, band -56.6 dB.
+  - RES 80: no self-oscillation. RMS -40.4, band -49.4 dB.
+  - RES 96: maybe a little self-oscillation. RMS -36.1, band -38.1 dB (the onset).
+  - RES 112: self-oscillation with the filter's own saturation, a steady 559 Hz tone.
+    RMS -28.2.
+  - RES 127: self-oscillation, more distortion, 557 Hz. RMS -25.4.
+  - Limit on at RES 127: no self-oscillation. RMS -41.0, band -49.4 dB, almost the
+    same as RES 80 with the limit off.
 
-So on the MK2 self-oscillation starts between RES 80 and 96 at these settings, and the
-MK1 caps (F1 80, F2 64) keep both filters below it. The owner kept the MK1 caps.
+So on this unit, at F1 FREQ 64, self-oscillation starts between RES 80 and 96, and the
+MK1 F1 cap of 80 sits just under it, with little margin. The owner kept the MK1 caps
+(F1 80, F2 64).
 
 ## Not checked
 
 - Only T1 (voice 0) was read, and the wave build (AW + res-limit) was not gated.
 - RESONANCE BOOST stayed off in the listening runs.
-- Higher filter frequencies were not swept by ear.
+- Other filter frequencies were not tested, so the margin at 80 is known only at FREQ 64.
+- F2's cap of 64 was not tested on its own (both RES moved together).
