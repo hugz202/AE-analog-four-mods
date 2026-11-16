@@ -87,6 +87,306 @@ could reach it.
 """
 
 
+[[pool]]
+name   = "cave7"
+start  = 0x40164cd4
+end    = 0x40164da0          # exclusive; 204 B
+stock  = "code"
+expect_sha256 = "ba7eb3f4ecd1ec57872267e4e322883f6780f4303a24414521784f1a6525a935"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 11 small routines, none referenced .
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x40164cd4..0x40164da0; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave8"
+start  = 0x4009a35c
+end    = 0x4009a478          # exclusive; 284 B
+stock  = "code"
+expect_sha256 = "72ca168489e889071c5399d94bf30e8e3e253dec7ba8ff82480ff31937fa8718"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 8 routines, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x4009a35c..0x4009a478; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave9"
+start  = 0x40086ce8
+end    = 0x40086dd8          # exclusive; 240 B
+stock  = "code"
+expect_sha256 = "e26d3eb64557de5425932cc3a6cc382b3c699c6ea0bec6d4ff13544c5892025c"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 12 routines, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x40086ce8..0x40086dd8; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave10"
+start  = 0x40090d7e
+end    = 0x40090e48          # exclusive; 202 B
+stock  = "code"
+expect_sha256 = "fa5dfa3e277501bf7254c66018b2d48792491a70c3d81db59be94e339bc35bd9"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 4 wrapper routines, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x40090d7e..0x40090e48; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave11"
+start  = 0x40060cb2
+end    = 0x40060d78          # exclusive; 198 B
+stock  = "code"
+expect_sha256 = "d9a5b7d1e339f27cc60c9730a6ba25818c786c07f24df89f3b9c89e0a4418d60"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 2 routines, none
+referenced. Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in
+the image, no switch-table case lands in it; never executed in seven emulator
+sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave12"
+start  = 0x4000165e
+end    = 0x40001738          # exclusive; 218 B
+stock  = "code"
+expect_sha256 = "f88b1272f9c3144a8ac46dea3b9a3eb6d07a7642bf9cf0c958a1c3a62486a028"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 2 routines (one masks interrupts), none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x4000165e..0x40001738; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave13"
+start  = 0x400f1740
+end    = 0x400f1812          # exclusive; 210 B
+stock  = "code"
+expect_sha256 = "0f12dc40abe8d2ed79e5c0b04fab32e5691f71558c2bcca48fa911a17e163ec7"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 7 routines, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x400f1740..0x400f1812; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave14"
+start  = 0x4005aac8
+end    = 0x4005ab68          # exclusive; 160 B
+stock  = "code"
+expect_sha256 = "04a694ae813921f8230ecaf2aba067889054bfa8693bf3d69843151357ddd486"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 1 routine, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x4005aac8..0x4005ab68; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave15"
+start  = 0x40055776
+end    = 0x4005582a          # exclusive; 180 B
+stock  = "code"
+expect_sha256 = "f13bb6fa084c1263a4ff6e68c424d3f4e8b5cc04f5d7ba6c39f41afc3bf143c4"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 2 routines, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x40055776..0x4005582a; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave16"
+start  = 0x401649c8
+end    = 0x40164a78          # exclusive; 176 B
+stock  = "code"
+expect_sha256 = "ebaf1506d5d33ad0bf0337fe240846b0bc446a7abd2db5bfae5cfd7243f87303"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 8 routines, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x401649c8..0x40164a78; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave17"
+start  = 0x400754e4
+end    = 0x40075584          # exclusive; 160 B
+stock  = "code"
+expect_sha256 = "adaa66540cba6559aefd5e9dc5518de143b8af69ba92b1c7f61c1d02b8bc25da"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 3 routines, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x400754e4..0x40075584; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave18"
+start  = 0x400174ba
+end    = 0x40017548          # exclusive; 142 B
+stock  = "code"
+expect_sha256 = "ce6ee101ee5a2bd86983f8d280351ff12505c1cab00ef43bf3b3dbd328b39a4b"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 1 routine, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x400174ba..0x40017548; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave19"
+start  = 0x40023ecc
+end    = 0x40023f5a          # exclusive; 142 B
+stock  = "code"
+expect_sha256 = "4b718d7f47016063efa423582ae6038c8646d6ebd9a50d44c3abab8ac6bb59d4"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 1 routine, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x40023ecc..0x40023f5a; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave20"
+start  = 0x400242d6
+end    = 0x4002435e          # exclusive; 136 B
+stock  = "code"
+expect_sha256 = "4f26dcb030103ba6fdbb32682b16b94390c6ee6c0f6b1108c16c7977c0b16b6a"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (docs/PORT-1.56.md, re/os156/deadscan.py): 1 routine, none referenced.
+Evidence as cave2/cave4..6: no branch or call target, no 32-bit word in the image,
+no switch-table case lands in 0x400242d6..0x4002435e; never executed in seven
+emulator sessions on stock 1.56 (incl. the EUCL page). Unreferenced in 1.55 too.
+"""
+
+[[pool]]
+name   = "cave21"
+start  = 0x400a1270
+end    = 0x400a12f8          # exclusive; 136 B
+stock  = "code"
+expect_sha256 = "ffaeca5c9be0076becf26f05534be9a548205832cdbe005c04bfbb12256ada82"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x400a1270..0x400a12f8; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
+[[pool]]
+name   = "cave22"
+start  = 0x400f153e
+end    = 0x400f15c6          # exclusive; 136 B
+stock  = "code"
+expect_sha256 = "bfb257293769f99ad6a06e6c93159e6135e4dce22557f1acee77807b096cc138"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x400f153e..0x400f15c6; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
+[[pool]]
+name   = "cave23"
+start  = 0x4008e406
+end    = 0x4008e48c          # exclusive; 134 B
+stock  = "code"
+expect_sha256 = "e45ec444dffae4ad783a711eabd285033ce4501bd0caa79661a00765d6d738d6"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x4008e406..0x4008e48c; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
+[[pool]]
+name   = "cave24"
+start  = 0x401674e8
+end    = 0x4016756e          # exclusive; 134 B
+stock  = "code"
+expect_sha256 = "292c258d248880a68fc7c5a9674f90f3c6549290f3fdd15aa0dfd0bd9f99b1cc"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x401674e8..0x4016756e; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
+[[pool]]
+name   = "cave25"
+start  = 0x4006fc86
+end    = 0x4006fd0a          # exclusive; 132 B
+stock  = "code"
+expect_sha256 = "b55894a6e6198b826b5d2894c993931f3a8df66850af0ebd1abeee8c798dd9b4"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x4006fc86..0x4006fd0a; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
+[[pool]]
+name   = "cave26"
+start  = 0x40074530
+end    = 0x400745b0          # exclusive; 128 B
+stock  = "code"
+expect_sha256 = "38f0f523edd663e42ec388fae8c38f2e63c13ff094a95b9ef4ddb96cb2d80da8"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x40074530..0x400745b0; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
+[[pool]]
+name   = "cave27"
+start  = 0x400952ae
+end    = 0x4009531c          # exclusive; 110 B
+stock  = "code"
+expect_sha256 = "a854fa8d3dd8ddb870e30e2d6b9278b96c6769b916942f5f2b9be3984f22ee60"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x400952ae..0x4009531c; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
+[[pool]]
+name   = "cave28"
+start  = 0x401377c8
+end    = 0x40137836          # exclusive; 110 B
+stock  = "code"
+expect_sha256 = "e53c3364a08826f3af0e33bb6b20824fdc4baf7624e97156f0426f720c8e5631"
+status = "probably-verified"
+note   = """
+OS 1.56 dead code (re/os156/deadscan.py, 2026-10-19 for 0012): unreferenced - no branch
+or call target, no 32-bit word in the image, no switch-table case lands in
+0x401377c8..0x40137836; never executed in the seven emulator coverage sessions on stock 1.56.
+"""
+
 # --------------------------------------------------------------------- claims
 
 [[pool]]
@@ -254,7 +554,7 @@ entry  = "copy4_gate"
 # "chorus_gate" - went with the shelved comb.)
 
 # ------------------------------------------------------------ 0007 digital path
-# Not in the default image (`make full`). Takes all of cave2; the two probes
+# Not in the default image yet (`make full`). Takes all of cave2; the two probes
 # that also live there are declared exclusive. Its capture buffers and SRR state
 # are DDR at 0x4680c000..0x4680c220, after 0006's comb lines in the same
 # unreferenced gap (0x46803000..0x4680ffff).
@@ -334,7 +634,7 @@ expect = "2f032f02242f0014"
 entry  = "lbl_gate"
 
 # ------------------------------------------------------------ 0002 303 slide
-# Not in the default image (`make full`). In `cave` after 0006. After it,
+# Not in the default image yet (`make full`). In `cave` after 0006. After it,
 # 0x40234cc8 is 0008's. (The 303 mode that briefly followed was rolled back on
 # 2026-10-11.)
 
@@ -363,7 +663,7 @@ expect = "41f30a007c10"
 entry  = "look_gate"
 
 # ------------------------------------------------------------ 0008 pages
-# Not in the default image (`make full`). In `cave` after 0002. See
+# Not in the default image yet (`make full`). In `cave` after 0002. See
 # mods/0008-pages/design.md for the page machinery.
 
 [[cave]]
@@ -483,7 +783,14 @@ owner   = "0007-digital-path"
 section = ".ui2"
 addr    = 0x40234d9c
 size    = 0x1b4
-note    = "name_of (the knob labels on the DIST and NOISE pages, SHP / FLD / FM with WAV on) and slot_rd / slot_wr (a kit byte, or a sound's WAV word)."
+note    = "slot_rd / sfield / slot_wr (a kit byte, a field of the sound's word 103, or word 102 = CHD's FLD) and the knob names (name_of moved to cave9, 2026-10-26)."
+
+[[cave]]
+owner   = "0007-digital-path"
+section = ".dp3"
+addr    = 0x401377c8
+size    = 0x6e
+note    = "The digital path's input HP (hp2, per sample) and its per-block setup with the sends' LEV gain (hp_set), moved out of the full cave2 (cave28)."
 
 # ------------------------------------------------------------ 0010 wave oscillator
 # Not in the default image (`make full`). In `cave` after 0007's part 2, and in
@@ -595,3 +902,168 @@ addr    = 0x40077a56
 size    = 2
 expect  = "6618"
 replace = "660c"
+
+# ------------------------------------------- 0007 / 0010: CHD's chord on COL (2026-10-26)
+# In the shelved inputs build's caves (cave8, cave9, cave11; freed 2026-10-26).
+[[cave]]
+owner   = "0010-wave-osc"
+section = ".wv2"
+addr    = 0x4009a35c
+size    = 0x11c
+note    = "fad_gate (moved out of the chorus gap): the voices' modes; CHD's chord from COL, its FLD from word 102 (cave8)."
+
+[[cave]]
+owner   = "0007-digital-path"
+section = ".ui6"
+addr    = 0x40086ce8
+size    = 0xf0
+note    = "name_of: the knob labels (CHD: COL named by its chord, the FLD dial) (cave9)."
+
+[[cave]]
+owner   = "0007-digital-path"
+section = ".ui8"
+addr    = 0x40060cb2
+size    = 0xc6
+note    = "osc_name / fold_name: the NOISE page's CHD labels (cave11)."
+
+# ------------------------------------------------- 0011 random track (OS 1.56)
+[[cave]]
+owner   = "0011-rand-track"
+section = ".text"
+addr    = 0x4000165e
+size    = 0xda
+note    = "0011 random track, .text (cave12)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd4"
+addr    = 0x400f1740
+size    = 0xd2
+note    = "0011 random track, .rnd4 (cave13)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd3"
+addr    = 0x4005aac8
+size    = 0xa0
+note    = "0011 random track, .rnd3 (cave14)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd5"
+addr    = 0x40055776
+size    = 0xb4
+note    = "0011 random track, .rnd5 (cave15)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd2"
+addr    = 0x401649c8
+size    = 0xb0
+note    = "0011 random track, .rnd2 (cave16)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd8"
+addr    = 0x400754e4
+size    = 0xa0
+note    = "0011 random track, .rnd8 (cave17)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd6"
+addr    = 0x400174ba
+size    = 0x8e
+note    = "0011 random track, .rnd6 (cave18)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd7"
+addr    = 0x40023ecc
+size    = 0x8e
+note    = "0011 random track, .rnd7 (cave19)."
+
+[[cave]]
+owner   = "0011-rand-track"
+section = ".rnd9"
+addr    = 0x400242d6
+size    = 0x88
+note    = "0011 random track, .rnd9 (cave20)."
+
+# The panel key handler (0x400c4348): `jsr key_code` (0x40059948), the event pushed,
+# re-emitted by key_gate, which takes TRACK + YES / TRACK + LEFT and passes every
+# other key back with its code in d0.
+[[detour]]
+owner  = "0011-rand-track"
+addr   = 0x400c435a
+size   = 6
+expect = "4eb940059948"
+entry  = "key_gate"
+
+# ------------------------------------------------- 0012 resonance limit (OS 1.56)
+[[cave]]
+owner   = "0012-res-limit"
+section = ".text"
+addr    = 0x400a1270
+size    = 0x88
+note    = "0012 resonance limit, .text (cave21)."
+
+[[cave]]
+owner   = "0012-res-limit"
+section = ".rl2"
+addr    = 0x400f153e
+size    = 0x88
+note    = "0012 resonance limit, .rl2 (cave22)."
+
+[[cave]]
+owner   = "0012-res-limit"
+section = ".rl3"
+addr    = 0x4008e406
+size    = 0x86
+note    = "0012 resonance limit, .rl3 (cave23)."
+
+[[cave]]
+owner   = "0012-res-limit"
+section = ".rl4"
+addr    = 0x401674e8
+size    = 0x86
+note    = "0012 resonance limit, .rl4 (cave24)."
+
+[[cave]]
+owner   = "0012-res-limit"
+section = ".rl5"
+addr    = 0x4006fc86
+size    = 0x84
+note    = "0012 resonance limit, .rl5 (cave25)."
+
+[[cave]]
+owner   = "0012-res-limit"
+section = ".rl6"
+addr    = 0x40074530
+size    = 0x80
+note    = "0012 resonance limit, .rl6 (cave26)."
+
+[[cave]]
+owner   = "0012-res-limit"
+section = ".rl7"
+addr    = 0x400952ae
+size    = 0x6e
+note    = "0012 resonance limit, .rl7 (cave27): the item's callback table and label."
+
+# After the modulation loop (LFOs, envelopes added into the voice words, clamped):
+# `tst.l 0x415c00dc`, re-emitted by res_gate after it scales F1 / F2 RES.
+[[detour]]
+owner  = "0012-res-limit"
+addr   = 0x400fd33a
+size   = 6
+expect = "4ab9415c00dc"
+entry  = "res_gate"
+
+# SOUND SETUP's builder, after F1 RESONANCE BOOST's item: `movea.l (%a3),%a0;
+# move.l 8(%a0),%d7` (the next item's add method), re-emitted by menu_gate.
+[[detour]]
+owner  = "0012-res-limit"
+addr   = 0x400e07bc
+size   = 6
+expect = "20532e280008"
+entry  = "menu_gate"

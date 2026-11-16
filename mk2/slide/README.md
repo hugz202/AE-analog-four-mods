@@ -7,7 +7,7 @@ trig (its length is raised to reach it plus a quarter step) and the next note gl
 in legato, with no LEN tweaking. Without the slide trig the notes are separate.
 
 With [dist](../dist/README.md) in the build, it is per synth track: SLD on the DIST
-page, kept with the kit. Without dist, every synth track slides this way (the MK1's
+page, kept with the sound (dist 2.0; with the kit before). Without dist, every synth track slides this way (the MK1's
 "always on" build).
 
 ## What changed from the MK1
@@ -16,10 +16,17 @@ page, kept with the kit. Without dist, every synth track slides this way (the MK
   with the MKII's LEN tick table (0x40218384); the two hooks are in the trig routine
   (0x4007a48c, after LEN is resolved, and 0x4007a7f2, the look-ahead's test).
 - **SLD** was a byte in the kit's spare FX words, which dist kept. Here dist keeps it
-  in core-a4's kit storage and publishes the four tracks' switches in `dist_sld`, a
+  in core-a4's storage (a sound field from dist 2.0) and publishes the four tracks' switches in `dist_sld`, a
   weak import: without dist it reads as zeros, and zeros mean "every track".
 
 ## Status
+
+**1.1** (core-a4mk2 0.7, build AD21 and AW21): the same code as 1.0, built and linked with
+core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
+storage layout, lock codes and CCs are unchanged and projects saved by the earlier
+build keep their settings. On 16 Nov 2026 it was in the builds R8L2, DL22, AD26, AW26 and DL23 that passed on an
+Analog Four MKII (hardware tests T380, T382-T386, T388, T390, T391); those runs had no
+checks of its own for it.
 
 In rytm-emu's A4 build (24 Oct 2026), with dist, scale-lock and wave: a pattern
 played with SLD on for track 1 and no fault. On an Analog Four MKII (24 Oct 2026): the slide heard working.

@@ -1,7 +1,8 @@
         | SPDX-License-Identifier: MIT
         | dist - AE 0007 (digital path) and 0008 (the DIST page) for the Analog
-        | Four MKII, OS 1.56, as an elekloader elemod on core-a4 0.2. This file
-        | is the audio side and the knob-name gate; dist.c is the page.
+        | Four MKII, OS 1.56, as an elekloader elemod on core-a4mk2 0.7
+        | (written for core-a4 0.5). This file
+        | is the audio side and SLD's knob-name gate; dist.c is the page.
         |
         | Per synth track, on the DIST page (press AMP twice): DIG puts the track
         | on the digital path (its analog dry sound is muted and the A4's own
@@ -9,15 +10,14 @@
         | RAT, OD), DRV the drive, BIT the bit reduction, SRR the sample-rate
         | reduction, LEV the processed signal's level; SLD is slide's mode.
         |
-        | The settings are kit fields in core-a4's mod storage (dist.c). The
-        | audio interrupt never calls core: the UI tick copies each track's
-        | settings into dist_set, laid out as the MK1 kept them in the kit's
-        | spare FX words, so the code below is the image port's (MK2-OS-1.56,
-        | mods/0007-digital-path) reading dist_set where it read the kit:
+        | The settings are sound fields in core-a4's mod storage (dist.c). Each
+        | audio block dist_render (dist.c, ev_render_out) puts what each track
+        | plays (its locks and modulation included) into dist_set, laid out as
+        | the MK1 kept them in the kit's spare FX words, so the code below is
+        | the image port's (MK2-OS-1.56, mods/0007-digital-path) reading
+        | dist_set where it read the kit:
         |   dist_set + 6t + 0..5   DIG DRV BIT SRR LEV SLD for track t (0..3)
         |   dist_set + 24 + t      CHR for track t
-        | (LEV is the plain level here; the kit field keeps it XOR 64, so a kit
-        | with no dist data reads 64.)
         |
         | Calls follow the stock ABI: d0/d1/a0/a1 are scratch, the rest is saved.
 
@@ -27,8 +27,6 @@
         .equ    fx_block_tail_resume, 0x400fead4
         .equ    short_name_resume,    0x4009e7a8
         .equ    long_name_resume,     0x4009e7cc
-        .equ    KNOB_NAME_CALL,       0x4002367e  | where the knob draw's short-name call returns
-        .equ    POPUP_NAME_CALL,      0x40025c2c  | where the encoder handler's long-name call returns
 
         .equ    TRK_SIZE,   6
         .equ    F_DIG,      0
@@ -97,7 +95,10 @@ dist_dry:
         |          +9.5 dB, so a voice below the clip keeps its level as DRV
         |          rises, and a driven one comes out near a clean voice's peak
         |   rate   hold y for 1 + SRR / 4 samples
-        | The slot gets y << 8 back (same scale as the clean voice).
+        | Ahead of all of it a fixed 12 dB/oct high-pass, -6 dB at 75 Hz (hp2,
+        | from 2.3), so the low end doesn't swamp the drive. The slot gets
+        | y << 8 back, scaled by LEV as the dry output is (from 2.3; 2.2 and
+        | before trimmed it by 256 - DRV), so the sends follow LEV.
         |
         | CHR picks the drive's character (0 HARD, 1 RAT, 2 OD). RAT and OD add
         | one-pole filters, run in z = x >> 5 with Q11 coefficients
@@ -118,7 +119,7 @@ dist_dry:
         | Per-track DSP state in dist_hold, a REC-byte record per track (a5
         | steps by REC), copied to the stack around the track's sample loop:
         .equ    FS,         4
-        .equ    REC,        14*FS
+        .equ    REC,        16*FS
         .equ    HV,         0*FS                  | the held sample
         .equ    CNT,        1*FS                  | the hold count
         .equ    MAKEUP,     2*FS                  | makeup, Q8
@@ -133,7 +134,9 @@ dist_dry:
         .equ    ESH,        11*FS                 | emphasis: hp >> ESH
         .equ    LTYPE,      12*FS                 | TYPE | STATE_TAG the states are for
         .equ    STATE_TAG,  0x5a5a00
-        .equ    SENDK,      13*FS                 | send trim, Q8
+        .equ    SENDK,      13*FS                 | the sends' gain, Q8 (from LEV)
+        .equ    H1,         14*FS                 | the input HP's two states (hp2)
+        .equ    H2,         15*FS
         .align  2
 dist_fxin:
         lea     -140(%sp),%sp                     | displaced
@@ -234,10 +237,7 @@ dist_fxin:
 10:     move.l  %d5,%d0
         divu.l  %d1,%d0
         move.l  %d0,MAKEUP(%a5)
-        mvz.b   F_DRV(%a2),%d0                    | send trim, Q8: 256 - DRV
-        neg.l   %d0                               | (DRV 64 -2.5 dB, 127 -6 dB):
-        addi.l  #256,%d0                          | a clipped voice is denser than
-        move.l  %d0,SENDK(%a5)                    | a clean one at the same peak
+        jsr     hp_set                            | SENDK, the HP's states
         moveq   #-1,%d4                           | BIT 0: mask -1, half 0
         sub.l   %a6,%a6
         mvz.b   F_BIT(%a2),%d0
@@ -259,6 +259,7 @@ dist_fxin:
 
 2:      move.l  (%a0),%d0                         | x
         asr.l   #8,%d0
+        jsr     hp2                               | the input HP
         tst.l   TYPE(%a5)                         | RAT/OD: emphasis and pre-clip LP
         beq.s   20f
         asr.l   #5,%d0                            | z
@@ -334,7 +335,7 @@ dist_fxin:
 5:      move.l  %d1,CNT(%a5)
         move.l  HV(%a5),%d0
         move.l  %d0,(%a1)+                        | for dist_fxout
-        muls.l  SENDK(%a5),%d0                    | << 8 back to slot scale, trimmed
+        muls.l  SENDK(%a5),%d0                    | << 8 back to slot scale, x LEV
         move.l  %d0,(%a0)                         | for the sends
         lea     FRAME_SIZE(%a0),%a0
         subq.l  #1,%d2
@@ -355,6 +356,62 @@ dist_fxin:
         subq.l  #1,%d7
         bne.w   1b
         jmp     fx_block_body
+
+        | ------------------------------------------------------------------
+        | The input HP, ahead of everything on the digital path (the drive is
+        | otherwise most sensitive to an acid line's low end): two one-pole
+        | high-passes in x, lp += (x - lp) * 5 / 512, hp = x - lp, each 75 Hz
+        | (-ln(1 - 5/512) x 48 kHz / 2 pi): 12 dB/oct, -6 dB at 75 Hz, the
+        | model of filter 2 in HP2 at RES 0 (k = 2: two equal poles) at FRQ
+        | ~32. Shifts and adds only, no multiply to wrap: d0 = x in and out,
+        | d1 and d5 clobbered (free at the sample loop's top). From the MK1's
+        | OS-1.56 0007 (2026-10-26).
+        | ------------------------------------------------------------------
+        .align  2
+hp2:    move.l  %d0,%d5
+        sub.l   H1(%a5),%d5                       | x - lp1
+        move.l  %d5,%d1
+        asr.l   #7,%d5
+        asr.l   #8,%d1
+        asr.l   #1,%d1
+        add.l   %d1,%d5                           | (x - lp1) * 5 / 512
+        add.l   H1(%a5),%d5
+        move.l  %d5,H1(%a5)
+        sub.l   %d5,%d0                           | hp1
+        move.l  %d0,%d5
+        sub.l   H2(%a5),%d5
+        move.l  %d5,%d1
+        asr.l   #7,%d5
+        asr.l   #8,%d1
+        asr.l   #1,%d1
+        add.l   %d1,%d5
+        add.l   H2(%a5),%d5
+        move.l  %d5,H2(%a5)
+        sub.l   %d5,%d0                           | hp2
+        rts
+
+        | Per block, from dist_fxin: the sends follow LEV as the dry output
+        | does (Q8, LEV x 2.5, so LEV 100, the analog path's level, is about
+        | unity, as the slot was clean); then the HP's states, cleared when out
+        | of +-2^24 (dist_hold is never cleared; a real state stays under
+        | 2^23). LEV is plain 0..127 in dist_set (the MK1 kept it XOR 64).
+        | a0, d0, d1 free.
+        .align  2
+hp_set: mvz.b   F_LEV(%a2),%d0
+        mulu.w  #10,%d0
+        lsr.l   #2,%d0
+        move.l  %d0,SENDK(%a5)
+        lea     H1(%a5),%a0
+        moveq   #2,%d1
+1:      move.l  (%a0),%d0
+        addi.l  #0x1000000,%d0
+        cmpi.l  #0x2000000,%d0
+        bcs.s   2f
+        clr.l   (%a0)
+2:      addq.l  #4,%a0
+        subq.l  #1,%d1
+        bne.s   1b
+        rts
 
         | ------------------------------------------------------------------
         | fx_block, after its output loop (a4 just past the 32 output pairs):
@@ -410,19 +467,14 @@ dist_fxout:
         | ------------------------------------------------------------------
         | The parameter sets' name getters (set, id), at their entries
         | (0x4009e79e short, 0x4009e7c2 long; both `movel %sp@(8),%d0;
-        | cmpil #295,%d0`): they return the record's name. The knob draw prints
-        | the short name under each knob, and the encoder handler shows the
-        | long one in the header while a knob turns. Asked from there (and only
-        | from there), an id an ae_names entry names gets that name: the hidden
-        | records the mods' pages use keep their own names everywhere else (an
-        | LFO's destination list among them). d0/d1/a0/a1 are free, as for any
-        | call.
+        | cmpil #295,%d0`). From core-a4 0.5 core names its lockable knobs
+        | itself and calls these for every other id, so only SLD's knob, the
+        | one dist knob that is not lockable (an id above 0x126, which no
+        | stock list holds), is named here: dist_name_of (dist.c) answers it
+        | and 0 for any other id. d0/d1/a0/a1 are free, as for any call.
         | ------------------------------------------------------------------
         .align  2
 dist_sname:
-        move.l  (%sp),%d0
-        cmpi.l  #KNOB_NAME_CALL,%d0
-        bne.s   9f
         clr.l   -(%sp)                            | dist_name_of(id, 0): short
         move.l  12(%sp),-(%sp)
         jsr     dist_name_of                      | (dist.c)
@@ -436,9 +488,6 @@ dist_sname:
 
         .align  2
 dist_lname:
-        move.l  (%sp),%d0
-        cmpi.l  #POPUP_NAME_CALL,%d0
-        bne.s   9f
         pea     1                                 | dist_name_of(id, 1): long
         move.l  12(%sp),-(%sp)
         jsr     dist_name_of

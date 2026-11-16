@@ -594,3 +594,131 @@ evidence = "Pattern load sanitising the NOTE SETUP bytes: `moveq #2,%d2` then KE
 addr = 0x400b29d4
 status = "verified"
 evidence = "key_scale_set: `moveq #2,%d0; cmpl %d2,%d0; bges; moveq #2,%d2` clamps the menu's value to 0..2."
+
+# ======================================================= 0011 random track (OS 1.56)
+[fn.key_code]
+addr = 0x40059948
+status = "verified"
+evidence = "(event) -> the panel key code (A4 MKI: 0x20..0x25 the track keys, 0x40 LEFT, 0x42 UP, 0x43 DOWN, 0x44 YES, 0x45 NO). First call of the panel key handler 0x400c4348, which switches on it (UP 0x42 = TRACK TRANSPOSE UP, NO 0x45, the track keys 0x20..0x25)."
+
+[fn.key_is_press]
+addr = 0x400599b6
+status = "verified"
+evidence = "(event) -> byte, nonzero on a press: tested before every action of the key handler 0x400c4348 (TRACK TRANSPOSE UP/DOWN, NO); 0x400599d2 is its release twin."
+
+[fn.held_tracks]
+addr = 0x40021d34
+status = "verified"
+evidence = "(view+108) -> the held track keys' mask (+432 of that object): the key handler's TRACK + UP/DOWN transpose tests it and passes it to the transpose 0x4009f0fa(pattern, delta, mask, 1)."
+
+[data.key_resume]
+addr = 0x400c4360
+status = "verified"
+evidence = "The key handler 0x400c4348 just after its `jsr key_code` (0x400c435a, the event pushed): `movel %a2@(116),%sp@-`, d0 = the key code."
+
+[data.key_handled]
+addr = 0x400c4722
+status = "verified"
+evidence = "The key handler's handled exit: `moveq #1,%d3` then the epilogue (moveml from %fp, unlk), so any %sp is fine."
+
+[fn.track_clear]
+addr = 0x400b6562
+status = "verified"
+evidence = "(track pattern, 1): stock CLEAR TRACK (the grid handler 0x40027c72 calls it when no undo is pending and then shows 'CLEAR TRACK'); allocates and keeps the undo copy (0x3d28 bytes)."
+
+[fn.track_undo]
+addr = 0x400b5552
+status = "verified"
+evidence = "(track pattern, 1) -> byte: if the pending undo is of that kind (1 = clear, 2 = paste), performs it and returns nonzero; the grid handlers then show 'UNDO CLEAR' / 'UNDO PASTE'."
+
+[fn.trig_flag_set]
+addr = 0x400b40a6
+status = "verified"
+evidence = "(track pattern, step, mask, value byte): sets / clears the step's flag bits. Its thunks: 0x400b457c mask 0x04 (CLEAR TRIG MUTE), 0x400b45ce mask 0x08 (CLEAR ACCENT); 0x10 note slide, 0x20 parameter slide, bits 0..1 the trig."
+
+[fn.str_from_cstr2]
+addr = 0x40131bfe
+status = "mapped"
+evidence = "(a0 = the object, C string pushed): builds the pop-up text object, as the grid handlers do for 'PASTE TRACK' / 'CLEAR TRACK' (0x40027d14)."
+
+[fn.str_convert]
+addr = 0x401314d4
+status = "mapped"
+evidence = "(dst, src): the second step of the same pop-up sequence (0x40027d22)."
+
+[fn.show_popup]
+addr = 0x4005fcb8
+status = "mapped"
+evidence = "(view, text, 0): shows the pop-up (0x40027d2e, after the two calls above); the two objects are destroyed with str_dtor after."
+
+[fn.str_dtor]
+addr = 0x40129b16
+status = "mapped"
+evidence = "Destroys the pop-up's text objects (fp - 12, fp - 4) after show_popup, every grid handler."
+
+[data.block_counter]
+addr = 0x415c00b0
+status = "mapped"
+evidence = "A counter fx_block (0x400f8930) reads at its start (`movel 0x415c00b0,%d0`): changes every audio block; only mixed into 0011's random seed."
+
+[fn.memcpy]
+addr = 0x40075ab8
+status = "verified"
+evidence = "(dst, src, n): moveml 16-byte blocks then the tail. Stock CLEAR TRACK copies the track's data (945 B) and lock area (0x3970 B) into its undo buffer with it; UNDO CLEAR copies them back."
+
+[fn.step_lock_prep]
+addr = 0x400b218a
+status = "verified"
+evidence = "(track pattern, step): UNDO CLEAR (track_undo) calls it for each step 0..63 before copying that step's 228 lock bytes back; it calls 0x400a05e4(lock object, tp[72], step) when the step is in range."
+
+
+# ------------------------------------------------- 0012 resonance limit (OS 1.56)
+[fn.project_track_ctx]
+addr = 0x400a21f6
+status = "mapped"
+evidence = "(project) -> the object track_index_of reads the current track from: the SOUND SETUP items' getters (0x400df7f0, 0x400df95e) call project_singleton, this, track_index_of, then active_kit and kit_track_sound."
+
+[fn.kit_track_sound]
+addr = 0x400998ba
+status = "mapped"
+evidence = "(kit, track) -> the track's sound object; its vtable +40 returns the sound's data (the 338-byte storage format: OSC DRIFT at +228, F1 RESONANCE BOOST at +232; 0x400afac6 / 0x400afb70), +16 takes a change notice (0x400afafc)."
+
+[fn.op_new]
+addr = 0x400635a0
+status = "mapped"
+evidence = "(size) -> memory: the SOUND SETUP builder (0x400e0558) allocates each callback's 1-byte state and each 0x54-byte menu item with it; the callbacks' managers free with 0x400635ac."
+
+[fn.functor_dtor]
+addr = 0x40129ad0
+status = "mapped"
+evidence = "(callback) destroys a 16-byte callback {state, ?, manager, invoker} after the menu item has copied it (0x400e06e6..0x400e06f8, four per item)."
+
+[fn.menu_toggle_item]
+addr = 0x4005aa1c
+status = "mapped"
+evidence = "(item, label, toggle, draw, adjust, -1, 8): builds a SOUND SETUP checkbox item from four callbacks; the view's vtable +8 adds it (0x400e06d8..0x400e06e2)."
+
+[data.boost_managers]
+addr = 0x400de93c
+status = "mapped"
+evidence = "F1 RESONANCE BOOST's four callback managers, 0x52 bytes apart (0x400de93c, 0x400de98e, 0x400de9e0, 0x400dea32): clone (op_new(1)), destroy, type info; generic, they never call the invoker."
+
+[fn.icon_for]
+addr = 0x400595d8
+status = "mapped"
+evidence = "(icon set, value, 0) -> the checkbox glyph for value: the BOOST item's draw callback (0x400df9c6) passes icon_set and the setting."
+
+[data.icon_set]
+addr = 0x415c9cb8
+status = "mapped"
+evidence = "The checkbox glyph set the SOUND SETUP draw callbacks pass to icon_for."
+
+[fn.draw_icon]
+addr = 0x4005912c
+status = "mapped"
+evidence = "(x?, glyph, y + 11, arg, 0): draws the checkbox; the BOOST draw callback tail-jumps to it with its own 3rd..5th arguments."
+
+[data.change_info_vt]
+addr = 0x4016f9f8
+status = "mapped"
+evidence = "The vtable of the change notice {vt, -1, 1, 1} a sound setting's setter passes to the sound's vtable +16 (0x400afb34..0x400afb5e)."

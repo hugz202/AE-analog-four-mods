@@ -1,0 +1,67 @@
+{
+ "id": "res-limit",
+ "version": "1.1",
+ "title": "RESONANCE LIMIT",
+ "category": "Sound",
+ "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
+ "license": "MIT",
+ "description": "FUNC + OSC1 (SOUND SETUP) gets a checkbox under OSCILLATOR DRIFT and F1 RESONANCE BOOST: RESONANCE LIMIT. With it on, the track's filter resonances are scaled, F1 RES 0..127 playing as 0..80 and F2 RES as 0..64, after the knob, p-locks, LFOs and envelopes are added, so the whole knob travel stays usable and the filters stay out of self-oscillation. The setting is per synth track and kept with the kit, in core-a4mk2's mod storage (4 of the kit's 128 bits), so it combines with dist and wave; it does not follow a sound into the sound pool or a copy, and it takes no locks. Needs core-a4mk2 0.8 (its ev_voice_params and ev_sound_setup). Port of AE-analog-four-mods 0012-res-limit (Analog Four MK1).",
+ "device": "analog-four-mk2",
+ "os": "1.56",
+ "sources": [
+  "res-limit.c"
+ ],
+ "storage": [
+  {
+   "sym": "res_lim",
+   "scope": "kit",
+   "bits": 4
+  }
+ ],
+ "subscribe": [
+  {
+   "event": "ev_tick",
+   "fn": "res_tick",
+   "order": 50
+  },
+  {
+   "event": "ev_project",
+   "fn": "res_project",
+   "order": 50
+  }
+ ],
+ "resources": {
+  "core": "0.8"
+ },
+ "requires": [
+  "core"
+ ],
+ "contribute": [
+  {
+   "to": "ev_voice_params",
+   "order": 50,
+   "data": "00000000",
+   "relocs": [
+    [
+     0,
+     "abs32",
+     "sym:res_voice",
+     0
+    ]
+   ]
+  },
+  {
+   "to": "ev_sound_setup",
+   "order": 50,
+   "data": "00000000",
+   "relocs": [
+    [
+     0,
+     "abs32",
+     "sym:res_setup",
+     0
+    ]
+   ]
+  }
+ ]
+}

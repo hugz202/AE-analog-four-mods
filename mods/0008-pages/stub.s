@@ -138,3 +138,4 @@ amp_slots_end:
 s_dist:         .asciz  "DIST"
         .align  2
 shared_draw_view:   .long 0                       | the view whose knobs were drawn last
+
