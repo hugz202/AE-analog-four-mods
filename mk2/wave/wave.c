@@ -9,7 +9,8 @@
  * and FM (the oscillator's use of them), there and in the lists that show
  * them (from core-a4 0.5 the name getters cannot tell who asks).
  *
- * The knobs are mod ids above 0x126 (0x310 mode, 0x311 chord), and both
+ * The knobs are 2 mod ids the linker gives ("knobs": 2, from 0x200 up; from
+ * 2.3, before which they were 0x310 mode, 0x311 chord), and both
  * settings are sound fields in core-a4's mod storage (wave_mode, 2 bits;
  * wave_chord, 4 bits), so they travel with the sound through kits, the sound
  * pool and copies. Both are lockable (core-a4 0.5): hold a trig and turn the
@@ -39,8 +40,11 @@
 #define TRACK_INDEX_OF 0x400adbd2
 
 #define PAGE_NOISE 7
-#define ID_MODE 0x310
-#define ID_CHORD 0x311
+/* the knobs' ids, from the linker ("knobs": 2 in mod.json): link-time
+ * constants, compared, never a case */
+CORE_KNOBS;
+#define ID_MODE CORE_KNOB(0)
+#define ID_CHORD CORE_KNOB(1)
 #define ID_SNH 74
 #define ID_COL 75
 #define ID_FAD 76

@@ -42,7 +42,8 @@ dial. Only the drawing changes.
 
 - **The page.** The MK1 patched the NOISE page's descriptor and drew its two knobs
   on AMP REL and CHO. Here wave answers page 7 through `core_pages` with two mod
-  knobs, D (0x310, the mode) and F (0x311, the chord), mod ids above 0x126 that
+  knobs, D (the mode) and F (the chord), two mod ids the linker gives (`"knobs": 2`,
+  from 0x200 up; 0x310 and 0x311 before 2.3) that
   core-a4 0.5 draws, turns and locks. `core_params` answers for both. (1.x drew them
   on the hidden records 37 and 140.)
 - **The names.** wave owns two sites on the parameter sets' name getters (short
@@ -66,6 +67,14 @@ dial. Only the drawing changes.
   it needs no clamp.
 
 ## Status
+
+**2.3** (core-a4mk2 0.7, built with elekloader's knob ids by count): the mode's and
+chord's ids come from the linker (`"knobs": 2` in mod.json, `CORE_KNOB(0)` and
+`CORE_KNOB(1)` in wave.c) in place of the fixed 0x310 and 0x311. Settings, storage, lock
+codes, the CC and the knob looks are 2.2's; mode and chord p-locks saved by an earlier
+build no longer apply (decided 2026-11-16), while the sound's settings load as before.
+Needs an elekloader with the Analog Four MKII's knob ids (`param_ids` from 0x200; on
+branch drive-loader-a4mk2 from e9cf675). Not yet run in the emulator or on a unit.
 
 **2.2** (core-a4mk2 0.8 build AW26, with scale-lock, slide and rand-track): on an Analog
 Four MKII on 16 Nov 2026 (hardware test T386): the screens, the settings, and by ear
