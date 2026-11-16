@@ -75,6 +75,7 @@
         .equ    MAGIC,      0x52414e44            | "RAND"
         .equ    PATTERN_NOW,   3                  | ev_pattern's how (ui.h)
         .equ    PATTERN_START, 5                  | NOW 3, SET 4, START 5
+        .equ    PATTERN_BYTE,  0x80006acc         | the playing pattern (core ui.c)
         .equ    LOCK_BYTES, 14704                 | a track's lock area (stock: 0x3970)
         .equ    STEP_LOCKS, 228                   | per step
 
@@ -116,8 +117,11 @@ rnd_key:
         | object, which stays the same across projects and patterns, so a
         | LEFT after them would put the old line into the new track.
         | rnd_pattern drops it after the change (pre 0) and before one that
-        | stock makes at once (pre 1 with PATTERN_NOW, _SET or _START); it
-        | never takes the change (returns 0).
+        | stock makes at once (pre 1 with PATTERN_NOW, _SET or _START) to a
+        | pattern other than the current one: stock also asks for the current
+        | pattern (stopped, YES on the sequencer view jumps to its own row,
+        | 0x4007c5fc), which changes nothing. It never takes the change
+        | (returns 0).
         | ------------------------------------------------------------------
         .globl  rnd_project
         .globl  rnd_pattern
@@ -135,6 +139,10 @@ rnd_pattern:
         moveq   #PATTERN_START-PATTERN_NOW,%d1
         cmp.l   %d1,%d0
         bhi.s   2f                                | not NOW, SET or START
+        moveq   #0,%d0
+        move.b  PATTERN_BYTE,%d0                  | the current pattern
+        cmp.l   8(%sp),%d0                        | asked for again: no change
+        beq.s   2f
 1:      clr.l   snap_magic
 2:      moveq   #0,%d0
         rts
