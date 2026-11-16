@@ -67,6 +67,12 @@ dial. Only the drawing changes.
 
 ## Status
 
+**2.2** (core-a4mk2 0.8 build AW26, with scale-lock, slide and rand-track): on an Analog
+Four MKII on 16 Nov 2026 (hardware test T386): the screens, the settings, and by ear
+(all eleven listening steps passed). The wave sounding stronger or weaker from one step to
+the next is free-running OSC1 phase against the wave's fixed start at each trig (T391:
+steady with OSC TRG on), not a wave fault.
+
 **2.1** (core-a4mk2 0.7, build AW21 with scale-lock and slide): the same code as 2.0, built and linked with
 core-a4mk2 0.7 (elekloader main, 14 Nov 2026) and the earlier build's lockfile, so the
 storage layout, lock codes and CCs are unchanged and projects saved by the earlier

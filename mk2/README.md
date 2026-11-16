@@ -11,12 +11,12 @@ MK1's own copiers and page hooks (0006, most of 0008) have no counterpart here.
 
 | folder | MK1 mods | what | status |
 |---|---|---|---|
-| [scale-lock](scale-lock/README.md) | 0001 | KEY SCALE with 35 scales; notes and the NOTE encoder kept in the scale | 1.0 hardware; 1.1 on core 0.7 not yet run |
-| [slide](slide/README.md) | 0002 | 303 slide: the slide trig on the note you glide from | 1.0 hardware; 1.1 on core 0.7 not yet run |
-| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run; 2.3 (the MK1's 75 Hz low-cut before the drive, sends follow LEV): on a unit by ear (T382, T390; attack clicks traced to free-running oscillator phase) |
-| [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.0 hardware (screens and values; not yet by ear); 2.1 on core 0.7 not yet run |
-| [rand-track](rand-track/README.md) | 0011 | hold a track key + YES: a random line in KEY NOTE + KEY SCALE with accents and slides; + LEFT undoes it | 1.2 on core-a4mk2 0.8 (its ev_track_key, ev_project, ev_pattern); emulator-gated, not yet on a unit |
-| [res-limit](res-limit/README.md) | 0012 | RESONANCE LIMIT in SOUND SETUP: F1 RES plays as 0..80, F2 RES as 0..64, per synth track (kit) | 1.1 on core 0.8: emulator and Analog Four MKII, heard by the owner (16 Nov 2026) |
+| [scale-lock](scale-lock/README.md) | 0001 | KEY SCALE with 35 scales; notes and the NOTE encoder kept in the scale | 1.0 hardware; 1.1 (core 0.7 build, unchanged code) in the 16 Nov unit builds R8L2, DL22, AD26, AW26 and DL23 (T380, T382-T386, T388, T390, T391), with no checks of its own |
+| [slide](slide/README.md) | 0002 | 303 slide: the slide trig on the note you glide from | 1.0 hardware; 1.1 (core 0.7 build, unchanged code) in the 16 Nov unit builds R8L2, DL22, AD26, AW26 and DL23 (T380, T382-T386, T388, T390, T391), with no checks of its own |
+| [dist](dist/README.md) | 0007, 0008 | DIST page behind AMP: a digital path with distortion per track; p-locks, and LFO/route/CC on DRV BIT SRR LEV (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T388); 2.3 (the MK1's 75 Hz low-cut before the drive, sends follow LEV): on a unit by ear (T382, T390; attack clicks traced to free-running oscillator phase) |
+| [wave](wave/README.md) | 0010 | the noise generator as a wave or chord oscillator, on the NOISE page; mode and chord p-locks, chord as a stepped LFO/route target (2.0) | 2.2 (knob looks): Analog Four MKII screens, values and by ear (T386; step-to-step strength traced to free-running OSC1 phase in T391) |
+| [rand-track](rand-track/README.md) | 0011 | hold a track key + YES: a random line in KEY NOTE + KEY SCALE with accents and slides; + LEFT undoes it | 1.2 on core-a4mk2 0.8 (its ev_track_key, ev_project, ev_pattern): Analog Four MKII by screens and memory checks, not by ear (T386, T388) |
+| [res-limit](res-limit/README.md) | 0012 | RESONANCE LIMIT in SOUND SETUP: F1 RES plays as 0..80, F2 RES as 0..64, per synth track (kit) | 1.1 on core 0.8: Analog Four MKII by memory reads (T380) and by ear (T383, T384) |
 
 0006 (kit FX persistence) is core's mod storage here; dist and wave keep their
 settings there, in the sound (from 2.0), which is what lets core (from core-a4 0.5) p-lock them.

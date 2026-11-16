@@ -55,7 +55,9 @@ stock makes at once). In 1.1 the copy was matched only to the track pattern obje
 a load keeps, so LEFT after loading another project put the old project's line into it
 (found on the unit, 2026-11-16). A request for the pattern already playing (stopped, YES
 on the sequencer view re-jumps to it) keeps the copy. Passed the emulator gate (AD25 /
-AW25, 16 Nov 2026); not yet run on a unit.
+AW25, 16 Nov 2026), then on an Analog Four MKII (AD26 and AW26, hardware tests T386 and
+T388, 16 Nov 2026): the random line in key and scale, accents and slides, and the undo,
+by screens and memory reads; not checked by ear.
 
 **1.1** (core-a4mk2 0.8, not final yet): builds; lints against core 0.8; links in
 AD23 (core 0.8 + dist + scale-lock + slide + rand-track) and AW23 (core 0.8 + wave +
