@@ -21,7 +21,7 @@ locks. The FX and CV tracks show no checkbox.
 
 ## 1.1: on core-a4mk2 0.8's events
 
-1.1 needs core-a4mk2 0.8 and has no sites of its own. The scaling runs in core's
+1.1 needs core-a4mk2 0.8 (upstream in irpina/elekloader from 339680d, #397) and has no sites of its own. The scaling runs in core's
 `ev_voice_params` (at 0x40103af6, the same point as 1.0's site), with `VP_F1_RES` /
 `VP_F2_RES`. The row comes from core's `ev_sound_setup` and
 `core_sound_setup_toggle` (at 0x400e62c8, after BOOST's row). The storage, the
@@ -64,7 +64,7 @@ AD21 and AW21 lockfiles: ADR1 (core, dist 2.1, scale-lock 1.1, slide 1.1, res-li
 ## Emulator gate (1.1, 14 Nov 2026)
 
 Gated in the A4 emulator (elkbench, PC) as R8L2, sha256 `00eb89e8…`: core-a4mk2 0.8
-at 97a5ff0 (`dcfc8735…`), dist 2.1, scale-lock 1.1, slide 1.1, res-limit 1.1
+at 97a5ff0 (`dcfc8735…`, byte-identical to upstream 0.8 at 339680d), dist 2.1, scale-lock 1.1, slide 1.1, res-limit 1.1
 (`b9d13afb…`) and the analoghealth 1.2 harness. Lockfile: AD21's plus `res_lim` at
 kit bits 0..3. Both flashes passed (over stock 1.56 and back). Plan t-r8l2 passed
 from the fresh, dirty and testslot-cleared starts. Voice 0 read:
@@ -74,8 +74,12 @@ from the fresh, dirty and testslot-cleared starts. Voice 0 read:
 - 0x7f00 again with it off
 The checkbox redraws on YES.
 
+## Unit run (T380, 16 Nov 2026)
+
+R8L2 ran on an Analog Four MKII (OS 1.56) and passed. With the limit off, F1/F2 RES read 0x7f00. With it on, F1 read 0x5000 and F2 0x4000, stopped and playing. The setting was kept after a save and reload, and both were back to 0x7f00 when it was switched off. The checkbox redraws on YES. CPU was 79.1 % and DSP 75.1 %.
+
 ## Not checked
 
-- A unit run. In the emulator, only T1 (voice 0) was read, and the wave build (AW +
+- Listening (the owner's check). Only T1 (voice 0) was read, and the wave build (AW +
   res-limit) was not gated.
 - The sound by ear (a draft until the owner's listening check).
