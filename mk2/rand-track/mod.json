@@ -11,6 +11,7 @@
  "sources": [
   "rand-track.s"
  ],
+ "events": "std1",
  "subscribe": [
   {
    "event": "ev_project",
