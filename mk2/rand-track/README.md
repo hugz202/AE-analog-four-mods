@@ -49,12 +49,13 @@ No lock codes, destinations, storage, CCs, NRPNs, pages or settings.
 
 ## Status
 
-**1.2** (core-a4mk2 0.8, not final yet): the undo copy is dropped on a project load or
+**1.2** (core-a4mk2 0.8, upstream as irpina/elekloader 339680d): the undo copy is dropped on a project load or
 CREATE NEW (`ev_project`) and on a pattern change (`ev_pattern`: after it, and before one
 stock makes at once). In 1.1 the copy was matched only to the track pattern object, which
 a load keeps, so LEFT after loading another project put the old project's line into it
-(found on the unit, 2026-11-16). 1.1 otherwise passed the emulator gate (AD24 / AW24) and
-its unit plans on AD24.
+(found on the unit, 2026-11-16). A request for the pattern already playing (stopped, YES
+on the sequencer view re-jumps to it) keeps the copy. Passed the emulator gate (AD25 /
+AW25, 16 Nov 2026); not yet run on a unit.
 
 **1.1** (core-a4mk2 0.8, not final yet): builds; lints against core 0.8; links in
 AD23 (core 0.8 + dist + scale-lock + slide + rand-track) and AW23 (core 0.8 + wave +
