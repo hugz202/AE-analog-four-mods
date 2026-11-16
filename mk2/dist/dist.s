@@ -96,8 +96,8 @@ dist_dry:
         |          rises, and a driven one comes out near a clean voice's peak
         |   rate   hold y for 1 + SRR / 4 samples
         | Ahead of all of it a fixed 12 dB/oct high-pass, -6 dB at 75 Hz (hp2,
-        | from 2.2), so the low end doesn't swamp the drive. The slot gets
-        | y << 8 back, scaled by LEV as the dry output is (from 2.2; 2.1 and
+        | from 2.3), so the low end doesn't swamp the drive. The slot gets
+        | y << 8 back, scaled by LEV as the dry output is (from 2.3; 2.2 and
         | before trimmed it by 256 - DRV), so the sends follow LEV.
         |
         | CHR picks the drive's character (0 HARD, 1 RAT, 2 OD). RAT and OD add
