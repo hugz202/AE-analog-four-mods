@@ -11,7 +11,6 @@
  "sources": [
   "rand-track.s"
  ],
- "events": "std1",
  "subscribe": [
   {
    "event": "ev_project",
@@ -19,7 +18,7 @@
    "order": 50
   },
   {
-   "event": "ev_pattern",
+   "event": "std_pattern",
    "fn": "rnd_pattern",
    "order": 90
   }
