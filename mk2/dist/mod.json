@@ -1,6 +1,6 @@
 {
  "id": "dist",
- "version": "2.1",
+ "version": "2.2",
  "title": "DIST",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
@@ -43,7 +43,11 @@
   {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_lp_drv", 0]]},
   {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_lp_bit", 0]]},
   {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_lp_srr", 0]]},
-  {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_lp_lev", 0]]}
+  {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_lp_lev", 0]]},
+  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_dig", 0]]},
+  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_chr", 0]]},
+  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_dials", 0]]},
+  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:dist_look_sld", 0]]}
  ],
  "resources": {
   "core": "0.7"

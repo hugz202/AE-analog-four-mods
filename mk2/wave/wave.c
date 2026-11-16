@@ -201,6 +201,15 @@ static int wave_text(struct core_text *t)
 const struct core_param wave_mode_params = {ID_MODE, ID_MODE, wave_get, wave_delta, wave_text};
 const struct core_param wave_chord_params = {ID_CHORD, ID_CHORD, wave_get, wave_delta, wave_text};
 
+/* Knob looks (core-a4mk2 0.6's core_knob_looks, from 2.2): the two knobs drawn
+ * as 1.x drew them, the mode on AMP PAN's marker (97) over OFF / WAV / CHD,
+ * the chord on AMP CHO's dial (94) over the chord list. Ranges 8.8, as
+ * wave_get answers. */
+#define STOCK_AMP_CHO 94
+#define STOCK_AMP_PAN 97
+const struct core_knob_look wave_look_mode = {ID_MODE, ID_MODE, STOCK_AMP_PAN, 0, 0, 2 << 8};
+const struct core_knob_look wave_look_chord = {ID_CHORD, ID_CHORD, STOCK_AMP_CHO, 0, 0, (NCHORDS - 1) << 8};
+
 const struct core_page wave_noise_page = {PAGE_NOISE, "NOISE (P 2/2)",
                                           {ID_SNH, ID_COL, ID_FAD, ID_MODE, 77, ID_CHORD}};
 

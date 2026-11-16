@@ -1,6 +1,6 @@
 {
  "id": "wave",
- "version": "2.1",
+ "version": "2.2",
  "title": "WAVE",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
@@ -32,7 +32,9 @@
   {"to": "core_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_mode_params", 0]]},
   {"to": "core_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_chord_params", 0]]},
   {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_lp_mode", 0]]},
-  {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_lp_chord", 0]]}
+  {"to": "core_lock_params", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_lp_chord", 0]]},
+  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_look_mode", 0]]},
+  {"to": "core_knob_looks", "order": 50, "data": "00000000", "relocs": [[0, "abs32", "sym:wave_look_chord", 0]]}
  ],
  "resources": {
   "core": "0.7"

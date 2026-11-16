@@ -259,6 +259,20 @@ static int dist_text(struct core_text *t)
 
 const struct core_param dist_params = {ID_DIG, ID_SLD, dist_get, dist_delta, dist_text};
 
+/* Knob looks (core-a4mk2 0.6's core_knob_looks, from 2.2): the knobs drawn as
+ * 1.0 drew them, on stock knobs' art. DIG as OSC1 AM's switch (50), CHR as
+ * AMP PAN's marker (97) over its three positions, DRV..LEV as AMP CHO's dial
+ * (94), SLD as OSC2 AM's switch (63). The ranges are the settings' own (8.8,
+ * as dist_get answers), so the graphic spans them. */
+#define STOCK_OSC1_AM 50
+#define STOCK_OSC2_AM 63
+#define STOCK_AMP_CHO 94
+#define STOCK_AMP_PAN 97
+const struct core_knob_look dist_look_dig = {ID_DIG, ID_DIG, STOCK_OSC1_AM, 0, 0, 1 << 8};
+const struct core_knob_look dist_look_chr = {ID_CHR, ID_CHR, STOCK_AMP_PAN, 0, 0, 2 << 8};
+const struct core_knob_look dist_look_dials = {ID_DRV, ID_LEV, STOCK_AMP_CHO, 0, 0, 127 << 8};
+const struct core_knob_look dist_look_sld = {ID_SLD, ID_SLD, STOCK_OSC2_AM, 0, 0, 1 << 8};
+
 const struct core_page dist_page = {PAGE_DIST, "DIST (P 2/2)",
                                     {ID_DIG, ID_CHR, ID_DRV, ID_BIT, ID_SRR, ID_LEV, ID_SLD}};
 const struct core_page dist_amp_page = {PAGE_AMP, "AMP (P 1/2)", {89, 90, 91, 92, 93, 94, 95, 96, 97, 98}};

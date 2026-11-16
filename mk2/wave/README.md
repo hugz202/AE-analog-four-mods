@@ -31,6 +31,13 @@ played on a track with dist's DIG on from 1.1; from 2.0 wave and dist cannot sha
 build (both keep their settings in the sound's 32 bits, and both answer the knob-name
 getters), so wave stands on its own.
 
+## Knob looks (2.2)
+
+From 2.2 the two knobs look as 1.x's did: wave contributes `core_knob_looks` entries
+(core-a4mk2 0.6), so the mode is drawn as AMP PAN's marker over OFF / WAV / CHD and the
+chord as AMP CHO's dial over the chord list. 2.0 and 2.1 drew both as core's default
+dial. Only the drawing changes.
+
 ## What changed from the MK1
 
 - **The page.** The MK1 patched the NOISE page's descriptor and drew its two knobs

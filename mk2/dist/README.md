@@ -40,6 +40,14 @@ room and both answer the knob-name getters. The patcher refuses the pair (the
 name-getter sites overlap). A kit saved by dist 1.0 loads with its dist settings at 0:
 they were kit fields, and 2.0's are sound fields.
 
+## Knob looks (2.2)
+
+From 2.2 the knobs look as 1.0's did: dist contributes `core_knob_looks` entries
+(core-a4mk2 0.6), so DIG is drawn as OSC1 AM's switch, CHR as AMP PAN's marker over
+its three positions, DRV, BIT, SRR and LEV as AMP CHO's dial, and SLD as OSC2 AM's
+switch. 2.0 and 2.1 drew all seven as core's default dial. Only the drawing changes:
+settings, locks, lock codes and CCs are 2.1's.
+
 ## What changed from the MK1
 
 - **The page.** The MK1's view builder, slot patches and page_info patch are
