@@ -1,6 +1,6 @@
 {
  "id": "wave",
- "version": "2.2",
+ "version": "2.3",
  "title": "WAVE",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
@@ -12,6 +12,7 @@
   "wave.s",
   "wave.c"
  ],
+ "knobs": 2,
  "storage": [
   {"sym": "wave_mode", "scope": "sound", "bits": 2, "lock": true},
   {"sym": "wave_chord", "scope": "sound", "bits": 4, "lock": true, "mod": true, "cc": true, "smooth": false}

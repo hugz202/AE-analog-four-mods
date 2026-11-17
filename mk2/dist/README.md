@@ -56,7 +56,8 @@ settings, locks, lock codes and CCs are 2.1's.
   core-a4 0.2's page tables: the page is page 50 in `core_pages`, behind AMP on synth
   tracks through `core_view_pages`, and AMP is retitled through a `core_pages` entry
   for page 11.
-- **The knobs** are mod ids above 0x126 (0x300..0x306), which core-a4 0.5 draws and
+- **The knobs** are seven mod ids the linker gives (`"knobs": 7`, from 0x200 up;
+  0x300..0x306 before 2.4), which core-a4 0.5 draws and
   names from each parameter's `core_lock_param` (short name on the knob, long name
   in the header and with a trig held). 1.0 drew them on seven hidden parameter
   records (38, 39, 51, 52, 64, 65, 88) with byte sites on their range and a RAM
@@ -79,6 +80,16 @@ settings, locks, lock codes and CCs are 2.1's.
 - **Encoder steps** for CHR keep the image port's three turns a position.
 
 ## Status
+
+**2.4** (core-a4mk2 0.7, built with elekloader's knob ids by count): the knobs' ids
+come from the linker (`"knobs": 7` in mod.json, `CORE_KNOB(0..6)` in dist.c) in place of
+the fixed 0x300..0x306, so dist cannot collide with another mod's ids and a +Drive
+mod's ids (0x4000 up) stay clear of it. The code tells the knobs apart by id -
+CORE_KNOB(0). Settings, storage, lock codes, CCs and the knob looks are 2.3's; p-locks
+saved by an earlier build on DIG..LEV no longer apply (decided 2026-11-16: the lock
+names the old id), while the sound's settings load as before. Needs an elekloader with
+the Analog Four MKII's knob ids (`param_ids` from 0x200; on branch drive-loader-a4mk2
+from e9cf675). Not yet run in the emulator or on a unit.
 
 **2.3** (core-a4mk2 0.7): the MK1's OS-1.56 0007 update (upstream commit ffcdc20,
 26 Oct 2026, hardware-verified on an MK1) on 2.2 (the knob looks): the input low-cut (`hp2`, two

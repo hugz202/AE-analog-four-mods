@@ -25,7 +25,8 @@
  * they take locks only and jump, with no smoothing, slide or modulation. SLD
  * is slide's per-track mode, read by the sequencer: it has no lock.
  *
- * The knobs are mod ids above 0x126 (0x300..0x306): core names the lockable
+ * The knobs are 7 mod ids the linker gives ("knobs": 7, from 0x200 up; from
+ * 2.4, before which they were 0x300..0x306): core names the lockable
  * ones from their core_lock_param, and dist.s's gate on the name getters
  * names SLD. Each audio block (ev_render_out, after core's snapshot) puts in
  * dist_set what each track plays: DRV..LEV from core's value read (the
@@ -55,13 +56,23 @@
 #define TURN 3                      /* turns a position, for settings of 3..16 positions */
 #define LEV_START 100               /* LEV when DIG goes on with LEV at 0 */
 
-#define ID_DIG 0x300
-#define ID_CHR 0x301
-#define ID_DRV 0x302
-#define ID_BIT 0x303
-#define ID_SRR 0x304
-#define ID_LEV 0x305
-#define ID_SLD 0x306
+/* the knobs' ids, from the linker ("knobs": 7 in mod.json): link-time
+ * constants, so the code tells them apart by id - ID_DIG, never by a case */
+CORE_KNOBS;
+#define K_DIG 0
+#define K_CHR 1
+#define K_DRV 2
+#define K_BIT 3
+#define K_SRR 4
+#define K_LEV 5
+#define K_SLD 6
+#define ID_DIG CORE_KNOB(K_DIG)
+#define ID_CHR CORE_KNOB(K_CHR)
+#define ID_DRV CORE_KNOB(K_DRV)
+#define ID_BIT CORE_KNOB(K_BIT)
+#define ID_SRR CORE_KNOB(K_SRR)
+#define ID_LEV CORE_KNOB(K_LEV)
+#define ID_SLD CORE_KNOB(K_SLD)
 
 typedef int32_t (*track_index_of_t)(void *);
 
@@ -84,46 +95,30 @@ const struct core_lock_param dist_lp_bit = {STORE(dist_bit), ID_BIT, 0, 127, "BI
 const struct core_lock_param dist_lp_srr = {STORE(dist_srr), ID_SRR, 0, 127, "SRR", "Sample Rate", CAT};
 const struct core_lock_param dist_lp_lev = {STORE(dist_lev), ID_LEV, 0, 127, "LEV", "Digital Level", CAT};
 
-/* a knob: its id, its field, its largest value, the offset in dist_set
- * (24: CHR's row) */
+/* a knob, by its index (K_DIG..K_SLD): its field, its largest value, the
+ * offset in dist_set (24: CHR's row) */
 struct knob {
-    int16_t id;
+    unsigned field;
     uint8_t max, cache;
 };
 
 static const struct knob knobs[] = {
-    {ID_DIG, 1, 0},
-    {ID_CHR, 2, 24},
-    {ID_DRV, 127, 1},
-    {ID_BIT, 127, 2},
-    {ID_SRR, 127, 3},
-    {ID_LEV, 127, 4},
-    {ID_SLD, 1, 5},
+    {STORE(dist_dig), 1, 0},
+    {STORE(dist_chr), 2, 24},
+    {STORE(dist_drv), 127, 1},
+    {STORE(dist_bit), 127, 2},
+    {STORE(dist_srr), 127, 3},
+    {STORE(dist_lev), 127, 4},
+    {STORE(dist_sld_f), 1, 5},
 };
 #define NKNOBS (sizeof knobs / sizeof knobs[0])
 
 static const char chr_names[3][4] = {"HRD", "RAT", "OD"};
 
-static unsigned field_of(int32_t id)
-{
-    switch (id) {
-    case ID_DIG: return STORE(dist_dig);
-    case ID_CHR: return STORE(dist_chr);
-    case ID_DRV: return STORE(dist_drv);
-    case ID_BIT: return STORE(dist_bit);
-    case ID_SRR: return STORE(dist_srr);
-    case ID_LEV: return STORE(dist_lev);
-    default: return STORE(dist_sld_f);
-    }
-}
-
 static const struct knob *knob_of(int32_t id)
 {
-    unsigned i;
-    for (i = 0; i < NKNOBS; i++)
-        if (knobs[i].id == id)
-            return &knobs[i];
-    return 0;
+    uint32_t k = (uint32_t)(id - ID_DIG);
+    return k < NKNOBS ? &knobs[k] : 0;
 }
 
 static unsigned char *project(void)
@@ -152,7 +147,7 @@ static void *sound(int32_t t)
 
 static unsigned get(const struct knob *k, void *s)
 {
-    unsigned v = s ? core_store_get(field_of(k->id), s, 0) : 0;
+    unsigned v = s ? core_store_get(k->field, s, 0) : 0;
     return v > k->max ? k->max : v;
 }
 
@@ -164,9 +159,9 @@ static void cache_all(void)
     int32_t t;
     for (t = 0; t < 4; t++) {
         void *s = sound(t);
-        dist_base[t][0] = get(&knobs[0], s);
-        dist_base[t][1] = get(&knobs[1], s);
-        dist_set[6 * t + 5] = dist_sld[1 + t] = get(&knobs[6], s);
+        dist_base[t][0] = get(&knobs[K_DIG], s);
+        dist_base[t][1] = get(&knobs[K_CHR], s);
+        dist_set[6 * t + 5] = dist_sld[1 + t] = get(&knobs[K_SLD], s);
     }
 }
 
@@ -221,7 +216,7 @@ static int dist_delta(void *view, int32_t id, int32_t delta, int32_t func)
         return 1;
     v = (int32_t)get(k, s) + step_of(delta, id, k->max);
     v = v < 0 ? 0 : v > k->max ? k->max : v;
-    core_store_set(field_of(id), s, 0, (unsigned)v);
+    core_store_set(k->field, s, 0, (unsigned)v);
     if (id == ID_DIG && v && !core_store_get(STORE(dist_lev), s, 0))
         core_store_set(STORE(dist_lev), s, 0, LEV_START);
     cache_all();

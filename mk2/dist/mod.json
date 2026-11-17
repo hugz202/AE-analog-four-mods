@@ -1,6 +1,6 @@
 {
  "id": "dist",
- "version": "2.3",
+ "version": "2.4",
  "title": "DIST",
  "category": "Sound",
  "author": "hugz202 (AE-analog-four-mods); MKII port: Iced-Cream",
@@ -12,6 +12,7 @@
   "dist.s",
   "dist.c"
  ],
+ "knobs": 7,
  "storage": [
   {"sym": "dist_dig", "scope": "sound", "bits": 1, "lock": true},
   {"sym": "dist_chr", "scope": "sound", "bits": 2, "lock": true},
