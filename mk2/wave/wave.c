@@ -217,7 +217,8 @@ const struct core_knob_look wave_look_chord = {ID_CHORD, ID_CHORD, STOCK_AMP_CHO
 const struct core_page wave_noise_page = {PAGE_NOISE, "NOISE (P 2/2)",
                                           {ID_SNH, ID_COL, ID_FAD, ID_MODE, 77, ID_CHORD}};
 
-/* wave.s's name gates: the mode its value (the chord's are core's); S&H, COL and FAD the
+/* names through core's knob names (core_knob_names, asked before core's own):
+ * the mode its value (the chord's are core's); S&H, COL and FAD the
  * oscillator's while the active track's sound has it on; 0 for any other id */
 const char *wave_name_of(int32_t id, int32_t long_name)
 {
@@ -230,6 +231,17 @@ const char *wave_name_of(int32_t id, int32_t long_name)
     }
     return 0;
 }
+
+/* core_knob_names' entries (analog-four-mk2/ui.h, struct core_knob_name) */
+struct wave_knob_name {
+    uint16_t first_id, last_id;
+    uint8_t kind, pad[3];
+    const char *(*name)(int32_t id, int32_t long_name);
+};
+/* the ids are 16 bits there, and the mode's id is the linker's (an abs32
+ * relocation), so the mode's entry spans every id and wave_name_of picks it */
+const struct wave_knob_name wave_knob_mode = {0, 0xffff, 0, {0, 0, 0}, wave_name_of};
+const struct wave_knob_name wave_knob_noise = {ID_SNH, ID_FAD, 0, {0, 0, 0}, wave_name_of};
 
 /* each audio block, after core's snapshot: each synth track's mode (its
  * trig's lock in its place) and chord (core's value read, unsmoothed, rounded
