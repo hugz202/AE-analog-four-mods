@@ -90,8 +90,10 @@ moved off its five OS sites onto core events (`ev_fx_in`, `ev_fx_out`, `core_dry
 `core_knob_names`), so a +Drive copy needs no site map. Voice v still takes track v's
 settings, as 2.3. Storage, lock codes, CCs and the knob ids are 2.4's. In the emulator
 (the same change on 2.3, build DE24) the output matched 2.3 sample for sample once the
-instruction timing was matched, dry mute included. Not yet run on a unit; a listening
-check comes before it counts as done.
+instruction timing was matched, dry mute included. On an Analog Four MKII on 17 Nov 2026 (hardware test T402, build EV25 with scale-lock,
+slide and rand-track): the screens and settings (10-dist, the DRV p-lock with a 2 s hold),
+rand-track's checks, and by ear (all nine listening steps passed, LEV 0 with DIG on
+silent, so the dry mute holds). CPU about 80 % with analoghealth.
 
 **2.4** (core-a4mk2 0.7, built with elekloader's knob ids by count): the knobs' ids
 come from the linker (`"knobs": 7` in mod.json, `CORE_KNOB(0..6)` in dist.c) in place of

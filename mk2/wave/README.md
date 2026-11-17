@@ -74,7 +74,10 @@ dial. Only the drawing changes.
 off its four OS sites onto core events (`ev_noise_fade`, `ev_noise_mix`,
 `core_knob_names`). Storage, lock codes, the CC and the knob ids are 2.3's. In the
 emulator (the same change on 2.2, build DW23) the names, the mode and the noise buffers
-follow; its sound is not rendered there. Not yet run on a unit.
+follow; its sound is not rendered there. On an Analog Four MKII on 17 Nov 2026 (hardware
+test T400, build EW24 with scale-lock, slide and rand-track): the screens and settings,
+rand-track's checks, and by ear (all eleven listening steps passed, the oscillator
+following played notes). CPU about 84 % with analoghealth.
 
 **2.3** (core-a4mk2 0.7, built with elekloader's knob ids by count): the mode's and
 chord's ids come from the linker (`"knobs": 2` in mod.json, `CORE_KNOB(0)` and
